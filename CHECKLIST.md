@@ -100,6 +100,7 @@ All game assets, tables and text are read from the original files at runtime (EO
 - [x] Play through level 1 to level 2 (TestPlaythroughLevel1: headless bot through Run — levers, door buttons, pressure plates, fights, stairs)
 - [ ] Full playthrough to the ending
 - [x] Level sweep: every enterable block of levels 1-12 entered through Run (TestLevelSweep; answers NPC dialogue, returns from stairs to a script-free block)
+- [x] Exempt list audited: every 'unused' S-routine has no call/far-pointer/immediate reference except from other unused routines (eob.lst + EXE byte scan); CPS types 1-3 appear in none of 131 shipped containers; runtime/driver entries are all Borland RTL or DOS file/video/sound/input layers
 - [x] Routine inventory: tools/parity.py exits 0 — all 749 EOB.EXE routines ported (520) or exempt with reason (229)
 - [x] Ghidra parity review of every ported routine: tools/review_cov.py exits 0 — 520/520 reviewed in tools/parity_review.txt (match/fixed/gap). Known gaps (documented, original-memory quirks): O20f6_26c6 class item -1 table tail, O20f6_00f7 low-memory flag, O211e_1e1b dissolve pacing.
 
