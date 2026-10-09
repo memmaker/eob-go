@@ -6,6 +6,8 @@ package eob
 // ponytail: "seen" = the 18 blocks the renderer looked at, which can reveal
 // a block behind a wall; not saved with the game.
 
+import "slices"
+
 const (
 	miniW    = 27 // cells across, party in the middle
 	miniH    = 13 // cells down
@@ -68,6 +70,9 @@ func (e *Engine) mapCell(blk int) (byte, bool) {
 		return e.miniPOI, true
 	}
 	if s := e.seen[e.CurrentLevel]; s != nil && s[blk] {
+		if c, ok := e.switchColor(blk); ok {
+			return c, true
+		}
 		return e.mapCellColor(blk), true
 	}
 	return 0, false
@@ -80,6 +85,8 @@ func (e *Engine) mapColors() {
 		e.miniLvl = e.CurrentLevel
 		e.miniFloor, e.miniWall = e.vmpColor(8*22, 330, &e.vcn.ColBg, 55), e.vmpColor(330, len(e.vmp), &e.vcn.ColWall, 130)
 		e.miniDoor, e.miniOpenDoor, e.miniPOI = e.nearestColor(24, 36, 63), e.nearestColor(8, 12, 40), e.nearestColor(63, 63, 0)
+		e.miniSwitch, e.miniSwitchOn = e.nearestColor(24, 63, 24), e.nearestColor(0, 28, 0)
+		e.miniPlate, e.miniPlateOn = e.nearestColor(63, 44, 12), e.nearestColor(40, 20, 0)
 	}
 }
 
@@ -144,4 +151,91 @@ func (e *Engine) vmpColor(from, to int, col *[16]byte, pct int) byte {
 		sum[k] = min(63, sum[k]*pct/(n*100))
 	}
 	return e.nearestColor(sum[0], sum[1], sum[2])
+}
+
+// plateWall is the pressure plate's wall index; every EOB1 level keeps it
+// (26 hole above, 27 pit, 28 plate), only the graphics differ.
+const plateWall = 28
+
+// switchUse is what the map knows about a lever, button or plate: whether
+// its script ran, and the other blocks that script changed (saved in the
+// .map file; the original walls come from LEVELn.MAZ).
+type switchUse struct {
+	Ran     bool
+	Targets []int
+}
+
+// isSwitch tells whether block blk holds a pressure plate, lever or button.
+func (e *Engine) isSwitch(blk int) bool {
+	_, ok := e.switchColor(blk)
+	return ok
+}
+
+// trackSwitch records a script run of switch block blk; call the returned
+// func once the script is done.
+func (e *Engine) trackSwitch(blk int) func() {
+	var before [1024][4]byte
+	for i := range e.Blocks {
+		before[i] = e.Blocks[i].Walls
+	}
+	lvl := e.CurrentLevel
+	return func() {
+		if e.switches == nil {
+			e.switches = map[int]map[int]*switchUse{}
+		}
+		if e.switches[lvl] == nil {
+			e.switches[lvl] = map[int]*switchUse{}
+		}
+		u := e.switches[lvl][blk]
+		if u == nil {
+			u = &switchUse{}
+			e.switches[lvl][blk] = u
+		}
+		u.Ran = true
+		if e.CurrentLevel != lvl { // the script changed level: block numbers mean something else
+			return
+		}
+		for i := range e.Blocks {
+			if i != blk && e.Blocks[i].Walls != before[i] && !slices.Contains(u.Targets, i) {
+				u.Targets = append(u.Targets, i)
+			}
+		}
+	}
+}
+
+// switchColor colours a block with a lever or button (green) or a pressure
+// plate (orange): light while it and every block its script ever changed
+// are as the level started, dark otherwise. A button or plate whose script
+// changed no block (a message, an item) stays dark once it ran: nothing
+// resets it. A door button toggles its own block's door.
+func (e *Engine) switchColor(blk int) (byte, bool) {
+	cur, orig := e.Blocks[blk].Walls, e.Blocks[blk].Walls
+	m := e.mazeWalls[e.CurrentLevel]
+	if m != nil {
+		orig = m[blk]
+	}
+	light, dark, lever := e.miniPlate, e.miniPlateOn, false
+	if cur[0] != plateWall && orig[0] != plateWall {
+		found := false
+		for _, w := range cur {
+			if t := e.SpecialWallTypes[w]; t >= 1 && t <= 4 { // door button, wall button, lever up / down
+				found, lever = true, lever || t >= 3
+			}
+		}
+		if !found {
+			return 0, false
+		}
+		light, dark = e.miniSwitch, e.miniSwitchOn
+	}
+	used := cur != orig
+	if u := e.switches[e.CurrentLevel][blk]; u != nil {
+		used = used || u.Ran && len(u.Targets) == 0 && !lever // a lever's own position is its state
+		for _, b := range u.Targets {
+			used = used || m != nil && e.Blocks[b].Walls != m[b]
+		}
+	}
+	if used {
+		return dark, true
+	}
+	return light, true
 }

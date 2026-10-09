@@ -216,6 +216,12 @@ type Engine struct {
 	textItemMode           bool   // ds:fe42
 	seqNPC                 int    // ds:efc6
 	textDat                []byte // TEXT.DAT (ds:df4e)
+
+	// map colours of levers / buttons and pressure plates (extension)
+	miniSwitch, miniSwitchOn byte                   // light green, dark once activated
+	miniPlate, miniPlateOn   byte                   // light orange, dark once activated
+	mazeWalls                map[int]*[1024][4]byte // level -> walls as in LEVELn.MAZ
+	switches                 map[int]map[int]*switchUse // level -> switch / plate block -> use
 }
 
 // New creates an engine reading data from the given game directory.

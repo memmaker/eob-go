@@ -122,3 +122,63 @@ func TestAutoWalk(t *testing.T) {
 		t.Fatalf("at %d, want %d", e.CurrentBlock, dst)
 	}
 }
+
+// Map colours: levers / buttons green, pressure plates orange, dark once
+// changed from the level's original state.
+func TestSwitchColor(t *testing.T) {
+	e, err := New(testDir, &fakeSys{})
+	if err != nil {
+		t.Skip(err)
+	}
+	if err := e.DebugLoadSave(testDir + "/EOBDATA.SAV"); err != nil {
+		t.Skip(err)
+	}
+	e.mapColors()
+	find := func(ok func(w [4]byte) bool) int {
+		for b := range e.Blocks {
+			if ok(e.Blocks[b].Walls) && e.Blocks[b].Walls == e.mazeWalls[e.CurrentLevel][b] {
+				return b
+			}
+		}
+		t.Skip("not on this level")
+		return 0
+	}
+	plate := find(func(w [4]byte) bool { return w[0] == plateWall })
+	side := func(w [4]byte, types ...byte) int {
+		for s, x := range w {
+			for _, ty := range types {
+				if e.SpecialWallTypes[x] == ty {
+					return s
+				}
+			}
+		}
+		return -1
+	}
+	lever := find(func(w [4]byte) bool { return side(w, 3, 4) >= 0 })
+	button := find(func(w [4]byte) bool { return side(w, 1, 2) >= 0 && side(w, 3, 4) < 0 })
+	check := func(blk int, want byte) {
+		t.Helper()
+		if c, ok := e.switchColor(blk); !ok || c != want {
+			t.Fatalf("block %d: colour %d %v, want %d", blk, c, ok, want)
+		}
+	}
+	check(plate, e.miniPlate)
+	check(lever, e.miniSwitch)
+	check(button, e.miniSwitch)
+	e.Blocks[plate].Walls = [4]byte{}
+	e.Blocks[lever].Walls[side(e.Blocks[lever].Walls, 3, 4)]++
+	e.trackSwitch(button)() // pressed, its script changed nothing
+	check(plate, e.miniPlateOn)
+	check(lever, e.miniSwitchOn)
+	check(button, e.miniSwitchOn)
+	door := (lever + 1) & 0x3ff // a block the lever's script changed
+	e.switches[e.CurrentLevel][lever] = &switchUse{Ran: true, Targets: []int{door}}
+	e.Blocks[door].Walls[0]++
+	e.Blocks[lever].Walls[side(e.Blocks[lever].Walls, 3, 4)]-- // lever back, door not
+	check(lever, e.miniSwitchOn)
+	e.Blocks[door].Walls[0]-- // door back too
+	check(lever, e.miniSwitch)
+	if _, ok := e.switchColor(0); ok {
+		t.Fatal("block 0 marked")
+	}
+}

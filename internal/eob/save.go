@@ -141,11 +141,12 @@ func (e *Engine) SaveGame(path string) error {
 	return err
 }
 
-// mapNotes is the explored map and points of interest (extensions), kept
-// in path+".map" beside the original-format save.
+// mapNotes is the explored map, points of interest and switch history
+// (extensions), kept in path+".map" beside the original-format save.
 type mapNotes struct {
-	Seen map[int]*[1024]bool
-	POIs map[int]map[int]string
+	Seen     map[int]*[1024]bool
+	POIs     map[int]map[int]string
+	Switches map[int]map[int]*switchUse `json:",omitempty"`
 }
 
 func (e *Engine) loadMapNotes(path string) {
@@ -153,11 +154,11 @@ func (e *Engine) loadMapNotes(path string) {
 	if b, err := os.ReadFile(path + ".map"); err == nil {
 		json.Unmarshal(b, &n) // a damaged file just starts the map over
 	}
-	e.seen, e.pois = n.Seen, n.POIs
+	e.seen, e.pois, e.switches = n.Seen, n.POIs, n.Switches
 }
 
 func (e *Engine) saveMapNotes(path string) error {
-	b, err := json.Marshal(mapNotes{e.seen, e.pois})
+	b, err := json.Marshal(mapNotes{e.seen, e.pois, e.switches})
 	if err != nil {
 		return err
 	}

@@ -27,6 +27,9 @@ func (e *Engine) runBlockScript(block, flags int) {
 	if flags&mask == 0 {
 		return
 	}
+	if e.isSwitch(block) { // map extension: note what this switch changes
+		defer e.trackSwitch(block)()
+	}
 	s := &e.script
 	s.flagFB76 = false
 	s.block = block

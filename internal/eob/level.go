@@ -157,6 +157,14 @@ func (e *Engine) loadMaze(name string) error {
 	// the 6-byte header is read over block 0: its flags keep header byte 4
 	// (ItemHead's low byte is cleared by loadLevel)
 	e.Blocks[0].Flags = b[4]
+	if e.mazeWalls == nil {
+		e.mazeWalls = map[int]*[1024][4]byte{}
+	}
+	orig := new([1024][4]byte)
+	for i := range orig {
+		copy(orig[i][:], b[6+i*4:])
+	}
+	e.mazeWalls[e.CurrentLevel] = orig
 	if e.VisitedLevels&(1<<(e.CurrentLevel-1)) != 0 {
 		e.restoreLevelState(e.CurrentLevel)
 		return nil
