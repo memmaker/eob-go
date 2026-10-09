@@ -12,7 +12,7 @@ func TestSaveRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Skip(err)
 	}
-	if err := e.DebugLoadSave(testDir + "/EOBDATA.SAV"); err != nil {
+	if err := e.DebugLoadSave(testSave); err != nil {
 		t.Skip(err)
 	}
 	e.camp.count[0] = 2 // memorize two of spell 1, none ready yet
@@ -51,7 +51,7 @@ func TestRestLearnsSpells(t *testing.T) {
 	if err != nil {
 		t.Skip(err)
 	}
-	if err := e.DebugLoadSave(testDir + "/EOBDATA.SAV"); err != nil {
+	if err := e.DebugLoadSave(testSave); err != nil {
 		t.Skip(err)
 	}
 	e.loadSpells()

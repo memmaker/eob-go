@@ -7,7 +7,7 @@ func TestPrintMessageWrap(t *testing.T) {
 	if err != nil {
 		t.Skip(err)
 	}
-	e.DebugLoadSave(testDir + "/EOBDATA.SAV")
+	e.DebugLoadSave(testSave)
 	e.setDim(7)
 	e.clearDim()
 	d := e.Scr.Dims[7]

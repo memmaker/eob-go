@@ -14,7 +14,7 @@ func TestLevelStateEncoderMatchesOriginal(t *testing.T) {
 	if err != nil {
 		t.Skip(err)
 	}
-	if err := e.DebugLoadSave(testDir + "/EOBDATA.SAV"); err != nil {
+	if err := e.DebugLoadSave(testSave); err != nil {
 		t.Skip(err)
 	}
 	checked := 0

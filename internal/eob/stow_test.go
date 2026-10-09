@@ -8,7 +8,7 @@ func TestStowItemPreferences(t *testing.T) {
 	if err != nil {
 		t.Skip(err)
 	}
-	if err := e.DebugLoadSave(testDir + "/EOBDATA.SAV"); err != nil {
+	if err := e.DebugLoadSave(testSave); err != nil {
 		t.Skip(err)
 	}
 	used := map[int]bool{}
@@ -61,7 +61,7 @@ func TestEatFromSlot(t *testing.T) {
 	if err != nil {
 		t.Skip(err)
 	}
-	if err := e.DebugLoadSave(testDir + "/EOBDATA.SAV"); err != nil {
+	if err := e.DebugLoadSave(testSave); err != nil {
 		t.Skip(err)
 	}
 	ration := 0
@@ -95,7 +95,7 @@ func TestAutoWalk(t *testing.T) {
 	if err != nil {
 		t.Skip(err)
 	}
-	if err := e.DebugLoadSave(testDir + "/EOBDATA.SAV"); err != nil {
+	if err := e.DebugLoadSave(testSave); err != nil {
 		t.Skip(err)
 	}
 	e.seen = map[int]*[1024]bool{e.CurrentLevel: new([1024]bool)}
@@ -214,7 +214,7 @@ func TestAutoWatch(t *testing.T) {
 	if err != nil {
 		t.Skip(err)
 	}
-	if err := e.DebugLoadSave(testDir + "/EOBDATA.SAV"); err != nil {
+	if err := e.DebugLoadSave(testSave); err != nil {
 		t.Skip(err)
 	}
 	e.assignVisibleBlocks(e.CurrentBlock, e.CurrentDirection)

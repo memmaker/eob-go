@@ -7,7 +7,7 @@ func TestLevelRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Skip(err)
 	}
-	e.DebugLoadSave(testDir + "/EOBDATA.SAV")
+	e.DebugLoadSave(testSave)
 	lvl, blk := e.CurrentLevel, e.CurrentBlock
 	w := e.Blocks[blk].Walls
 	e.scriptLoadNewLevel(lvl%12+1, blk, -1)
@@ -25,7 +25,7 @@ func TestItemNames(t *testing.T) {
 	if err != nil {
 		t.Skip(err)
 	}
-	e.DebugLoadSave(testDir + "/EOBDATA.SAV")
+	e.DebugLoadSave(testSave)
 	seen := map[string]bool{}
 	for i := 1; i < len(e.Items); i++ {
 		if e.Items[i].Type < 0 || e.Items[i].NameUnid == 0 {
@@ -50,7 +50,7 @@ func TestSwap(t *testing.T) {
 	e.loadPlayfield()
 	e.loadButtons()
 	e.loadTimers()
-	e.DebugLoadSave(testDir + "/EOBDATA.SAV")
+	e.DebugLoadSave(testSave)
 	a, b := e.Chars[0].Name, e.Chars[1].Name
 	e.clickedCharName(0)
 	if e.SwapChar != 0 || len(e.activeButtons()) != 7 {
@@ -70,7 +70,7 @@ func TestDrinkVitality(t *testing.T) {
 	e.InitResources()
 	e.loadPlayfield()
 	e.loadTimers()
-	e.DebugLoadSave(testDir + "/EOBDATA.SAV")
+	e.DebugLoadSave(testSave)
 	for i := 1; i < len(e.Items); i++ {
 		it := &e.Items[i]
 		if it.Type >= 0 && e.ItemTypes[it.Type].ExtraProps&0x7f == 0xe && it.Value == 5 {
@@ -91,7 +91,7 @@ func TestEquippedItemsUsable(t *testing.T) {
 	if err != nil {
 		t.Skip(err)
 	}
-	e.DebugLoadSave(testDir + "/EOBDATA.SAV")
+	e.DebugLoadSave(testSave)
 	for c := range e.Chars {
 		if !e.charStatus(c, 1) {
 			continue
@@ -132,7 +132,7 @@ func TestTurnMonster(t *testing.T) {
 	if err != nil {
 		t.Skip(err)
 	}
-	e.DebugLoadSave(testDir + "/EOBDATA.SAV")
+	e.DebugLoadSave(testSave)
 	m := &e.Monsters[0]
 	need := 0
 	for m.Type = 0; m.Type < 32; m.Type++ {

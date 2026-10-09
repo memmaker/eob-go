@@ -7,6 +7,9 @@ import (
 
 const testDir = "/Users/felix/Projects/EOB/Eye of the Beholder.app/Contents/Resources/game"
 
+// testSave is a frozen copy of a savegame, so tests do not follow the live one.
+const testSave = "testdata/EOBDATA.SAV"
+
 func TestIconStrings(t *testing.T) {
 	e, err := New(testDir, nil)
 	if err != nil {

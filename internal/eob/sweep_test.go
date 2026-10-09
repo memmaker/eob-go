@@ -251,7 +251,7 @@ func TestLevelSweep(t *testing.T) {
 				t.Skip(err)
 			}
 			s.e = e
-			if err := e.Run(testDir + "/EOBDATA.SAV"); err != nil {
+			if err := e.Run(testSave); err != nil {
 				t.Fatal(err)
 			}
 			t.Logf("level %d: %+v", lv, s.stats)

@@ -7,7 +7,7 @@ func TestLinkItemTop(t *testing.T) {
 	if err != nil {
 		t.Skip(err)
 	}
-	if err := e.DebugLoadSave(testDir + "/EOBDATA.SAV"); err != nil {
+	if err := e.DebugLoadSave(testSave); err != nil {
 		t.Skip(err)
 	}
 	const blk, a, b = 5, 10, 11
@@ -41,7 +41,7 @@ func TestStowItem(t *testing.T) {
 	if err != nil {
 		t.Skip(err)
 	}
-	if err := e.DebugLoadSave(testDir + "/EOBDATA.SAV"); err != nil {
+	if err := e.DebugLoadSave(testSave); err != nil {
 		t.Skip(err)
 	}
 	for c := range e.Chars { // char 2 gets the emptiest backpack

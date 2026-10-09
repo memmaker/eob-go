@@ -36,7 +36,7 @@ func TestTurnBasedMode(t *testing.T) {
 		t.Skip(err)
 	}
 	s.e = e
-	if err := e.Run(testDir + "/EOBDATA.SAV"); err != nil {
+	if err := e.Run(testSave); err != nil {
 		t.Fatal(err)
 	}
 	if s.ticks[1] != s.ticks[0] || s.ticks[2]-s.ticks[1] != turnTicks {
