@@ -873,6 +873,7 @@ func (e *Engine) openCamp() {
 		}
 	}
 	e.saveCampView()
+	oldDim := e.txtDim // [bp-6], restored at 23bb
 	oldFont := e.setFont(e.font8)
 	e.camp.redraw = false
 	redrawChars, reloadInvent := false, false
@@ -1070,6 +1071,7 @@ func (e *Engine) openCamp() {
 	if reloadInvent { // 2394: INVENT back to page 2
 		e.loadCPSVia3(e.X.Str(dsCampInvent), 2)
 	}
+	e.setDim(oldDim) // 23bb: back to the message window
 	e.present()
 }
 
