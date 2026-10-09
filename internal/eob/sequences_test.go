@@ -3,9 +3,15 @@ package eob
 import "testing"
 
 type keySys struct {
-	keys []int
-	gap  bool
+	keys   []int
+	gap    bool
+	mx, my int
+	up     int // button to release on the next poll
 }
+
+// click encodes a mouse click at game pixel x,y (button 1 left, 2 right)
+// as a negative keys entry.
+func click(x, y, b int) int { return -(b<<17 | y<<9 | x) }
 
 func (s *keySys) Present(pix, pal []byte) {}
 
@@ -15,6 +21,11 @@ func (s *keySys) PollEvent() (Event, bool) {
 	if s.gap = !s.gap; s.gap {
 		return Event{}, false
 	}
+	if s.up != 0 {
+		b := s.up
+		s.up = 0
+		return Event{Kind: EvMouseUp, Button: b, X: s.mx, Y: s.my}, true
+	}
 	if len(s.keys) == 0 {
 		return Event{Kind: EvQuit}, true
 	}
@@ -23,9 +34,14 @@ func (s *keySys) PollEvent() (Event, bool) {
 	if k == 0 { // idle poll: stands in for a pause between keys
 		return Event{}, false
 	}
+	if k < 0 {
+		k = -k
+		s.mx, s.my, s.up = k&0x1ff, k>>9&0xff, k>>17
+		return Event{Kind: EvMouseDown, Button: s.up, X: s.mx, Y: s.my}, true
+	}
 	return Event{Kind: EvKeyDown, Key: k}, true
 }
-func (s *keySys) Mouse() (int, int) { return 0, 0 }
+func (s *keySys) Mouse() (int, int) { return s.mx, s.my }
 func (s *keySys) Millis() uint32    { return 0 }
 func (s *keySys) Sleep(ms int)      {}
 

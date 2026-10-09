@@ -26,6 +26,11 @@ func TestDOSBoxSaveParity(t *testing.T) {
 	}{
 		// load game, camp, Game Options, Save Game, Yes
 		{"orig_roundtrip.SAV", []int{KeyEnter, w, w, keyC, w, w, KeyKP2, KeyKP2, KeyKP2, KeyKP2, KeyKP2, KeyEnter, w, w, KeyKP2, KeyEnter, w, w, KeyEnter, w, w}},
+		// load game, then by mouse: camp, Preferences, Bar Graphs, Sounds, Exit,
+		// Game Options, Save Game, Yes
+		{"orig_prefs_mouse.SAV", []int{KeyEnter, w, w, click(299, 186, 1), w, w, click(80, 95, 1), w, w,
+			click(80, 61, 1), w, w, click(80, 44, 1), w, w, click(148, 128, 1), w, w, click(80, 112, 1), w, w,
+			click(80, 44, 1), w, w, click(32, 63, 1), w, w}},
 	}
 	for _, c := range cases {
 		t.Run(c.ref, func(t *testing.T) {
