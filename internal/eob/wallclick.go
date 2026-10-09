@@ -173,17 +173,6 @@ func (e *Engine) clickedNiche(block, side int) bool {
 		return false
 	}
 	b := &e.Blocks[block]
-	if e.KbdMode && e.kbdSlot == 0x10 {
-		it := e.unlinkListItem(&b.ItemHead, 8, -1)
-		if e.Items[it].Type == 0x10 {
-			e.linkItem(&e.Chars[e.InvChar].Inventory[0x10], -2, it, 0)
-			e.drawInvSlot(0x10, true, 0)
-		} else {
-			e.printMessage(e.X.Str(0x5b39))
-			e.linkItemTop(block, it, 8)
-		}
-		return true
-	}
 	if e.heldItem() == 0 {
 		if it := e.unlinkListItem(&b.ItemHead, 8, -1); it != 0 {
 			e.runBlockScript(block, 8)

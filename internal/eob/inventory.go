@@ -75,7 +75,7 @@ func (e *Engine) drawInvPanel(c int) {
 			e.drawInvSlot(i, false, 2)
 		}
 		e.drawInvSlot(16, true, 2)
-		e.drawInvSlot(int(e.kbdSlot), true, 2)
+		e.drawInvSlot(0, true, 2)
 	} else {
 		e.drawStats(c)
 	}
@@ -125,9 +125,6 @@ func (e *Engine) drawInvSlot(slot int, frame bool, page int) {
 				nx = 0xe9
 			}
 			e.printInt(n, nx, 0x41, 0xf, 0)
-		}
-		if e.KbdMode && e.kbdSlot == slot {
-			e.Scr.DrawRect(page, x-1, y-1, x+sz, y+sz, 0xf)
 		}
 	}
 	if it != 0 && t != 1 {
@@ -226,7 +223,6 @@ func (e *Engine) openInventory(c int) {
 
 // closeInventory ports S0acd_01e3: restores the party panel.
 func (e *Engine) closeInventory() {
-	e.kbdSlot = 0
 	e.GuiMode = 0
 	e.Scr.CopyRegion(176, 0, 176, 0, 144, 168, 13, 0)
 	e.DrawPlayfield()

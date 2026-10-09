@@ -8,6 +8,7 @@ const (
 	KeyTab    = 16
 	KeyAttack = 34    // F (extension: front-row attack, alternating)
 	KeyMap    = 0x200 // M (extension: full-screen map; the wall click moved to R)
+	KeyThrow  = 0x201 // G (extension: throw the next hand-held throwing weapon)
 	KeyBack   = 15
 	KeyMinus  = 12
 	KeyEqual  = 13

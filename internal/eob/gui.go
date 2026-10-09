@@ -250,9 +250,6 @@ func (e *Engine) drawHand(c, hand int) {
 	}
 	item := int(ch.Inventory[hand])
 	e.Scr.DrawBox3D(e.drawPage, x, y, x+0x1e, y+0xf, e.col.BoxHi, e.col.BoxLo, int(e.col.BoxFill))
-	if e.KbdMode && c == e.InvChar && hand == e.kbdSlot {
-		e.Scr.DrawRect(e.drawPage, x, y, x+0x1e, y+0xf, 0xf)
-	}
 	if ch.SlotStatus[hand] != 0 {
 		e.drawSlotStatus(x, y, int(ch.SlotStatus[hand]))
 		return

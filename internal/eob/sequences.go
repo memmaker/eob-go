@@ -252,7 +252,7 @@ func (e *Engine) deleteItemsOfType(typ, val int) bool {
 			if e.GuiMode == 1 && e.InvChar == c {
 				e.drawInvSlotNow(s)
 			}
-			if !e.KbdMode && int(e.Items[e.HandItem].Type) == typ {
+			if int(e.Items[e.HandItem].Type) == typ {
 				e.Items[e.HandItem].Block = -1
 				e.setHandItem(0)
 			}

@@ -559,7 +559,7 @@ func (e *Engine) DrawScene(refresh bool) {
 	if refresh && !e.noMonsterSound {
 		e.Scr.CopyRegion(0, 0, 0, 0, 176, 120, scenePage, 0)
 	}
-	e.playSoundUpdate(0) // 1fc6: flush the queued sound
+	e.playSoundUpdate(0)  // 1fc6: flush the queued sound
 	if !e.SpellbookOpen { // ds:f3b9: the spell menu covers the compass
 		e.drawCompass()
 	}

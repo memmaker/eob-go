@@ -88,11 +88,7 @@ func (e *Engine) loadSave(path string, fromMenu bool) error {
 	e.drawCompass()
 	e.loadCPSVia3(e.X.Str(0x6b7a), 2) // INVENT
 	e.DrawPlayfield()
-	if !e.KbdMode {
-		e.setHandItem(e.HandItem)
-	} else if e.HandItem != 0 {
-		e.linkItemToBlock(e.CurrentBlock, e.HandItem, e.u8(0x1a1b+e.CurrentDirection*4+e.rollDice(1, 2, -1)))
-	}
+	e.setHandItem(e.HandItem)
 	return nil
 }
 

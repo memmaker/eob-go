@@ -720,9 +720,7 @@ func (e *Engine) useItem(c, hand int) {
 			e.openSpellbook(c, e.ItemTypes[typ].ExtraProps&0x7f == 6)
 		}
 	case 7:
-		if e.KbdMode {
-			e.eatFood(c)
-		}
+		e.eatFood(c)
 	case 4, 8, 0xc, 0xd, 0xf:
 		e.printMessage(e.X.Str(0x3a3e))
 	case 9:

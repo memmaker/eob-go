@@ -155,7 +155,23 @@ func TestSwitchColor(t *testing.T) {
 		return -1
 	}
 	lever := find(func(w [4]byte) bool { return side(w, 3, 4) >= 0 })
-	button := find(func(w [4]byte) bool { return side(w, 1, 2) >= 0 && side(w, 3, 4) < 0 })
+	button := 0
+	for b := range e.Blocks {
+		if w := e.Blocks[b].Walls; side(w, 2) >= 0 && side(w, 3, 4) < 0 && w == e.mazeWalls[e.CurrentLevel][b] {
+			if _, ok := e.switchColor(b); !ok != !e.scriptChanges(int(e.Blocks[b].Script)) {
+				t.Fatalf("decoration block %d: marked %v", b, ok)
+			} else if ok && button == 0 {
+				button = b
+			}
+		}
+	}
+	for b := range e.Blocks { // door buttons keep the door colours
+		if side(e.Blocks[b].Walls, 1) >= 0 && side(e.Blocks[b].Walls, 2, 3, 4) < 0 && e.Blocks[b].Walls[0] != plateWall {
+			if _, ok := e.switchColor(b); ok {
+				t.Fatalf("door button block %d marked", b)
+			}
+		}
+	}
 	check := func(blk int, want byte) {
 		t.Helper()
 		if c, ok := e.switchColor(blk); !ok || c != want {
@@ -167,12 +183,16 @@ func TestSwitchColor(t *testing.T) {
 	check(button, e.miniSwitch)
 	e.Blocks[plate].Walls = [4]byte{}
 	e.Blocks[lever].Walls[side(e.Blocks[lever].Walls, 3, 4)]++
-	e.trackSwitch(button)() // pressed, its script changed nothing
+	e.trackSwitch(button)() // pressed, its script only showed a message
+	check(button, e.miniSwitch)
+	done := e.trackSwitch(button) // pressed again, now its script sets a flag
+	e.LevelFlags[e.CurrentLevel] ^= 1
+	done()
 	check(plate, e.miniPlateOn)
 	check(lever, e.miniSwitchOn)
 	check(button, e.miniSwitchOn)
 	door := (lever + 1) & 0x3ff // a block the lever's script changed
-	e.switches[e.CurrentLevel][lever] = &switchUse{Ran: true, Targets: []int{door}}
+	e.switches[e.CurrentLevel][lever] = &switchUse{Fired: true, Targets: []int{door}}
 	e.Blocks[door].Walls[0]++
 	e.Blocks[lever].Walls[side(e.Blocks[lever].Walls, 3, 4)]-- // lever back, door not
 	check(lever, e.miniSwitchOn)
@@ -184,17 +204,40 @@ func TestSwitchColor(t *testing.T) {
 }
 
 // An auto-walk stops when a monster or item comes into view, not for one
-// already in view when it started.
+// already in view when it started, nor for one behind a wall.
 func TestAutoWatch(t *testing.T) {
-	e := &Engine{}
-	e.scene.visIndex[3], e.scene.visIndex[5] = 100, 200
-	e.Blocks[100].ItemHead = 7 // in view from the start
+	e, err := New(testDir, &fakeSys{})
+	if err != nil {
+		t.Skip(err)
+	}
+	if err := e.DebugLoadSave(testDir + "/EOBDATA.SAV"); err != nil {
+		t.Skip(err)
+	}
+	e.assignVisibleBlocks(e.CurrentBlock, e.CurrentDirection)
+	vis := e.visibleSlots()
+	var seen, hidden []int
+	for i, b := range e.scene.visIndex {
+		e.Blocks[b].ItemHead, e.Blocks[b].Flags = 0, e.Blocks[b].Flags&^7
+		if i == 16 {
+			continue
+		}
+		if vis[i] {
+			seen = append(seen, b)
+		} else {
+			hidden = append(hidden, b)
+		}
+	}
+	if len(seen) < 2 || len(hidden) == 0 {
+		t.Skipf("start view: %d visible, %d hidden", len(seen), len(hidden))
+	}
+	e.Blocks[seen[0]].ItemHead = 7 // in view from the start
 	e.autoPath, e.autoSpots = []int{0, 0}, e.visibleSpots()
+	e.Blocks[hidden[0]].Flags |= 1 // a monster behind a wall
 	e.autoWatch()
 	if e.autoPath == nil {
-		t.Fatal("stopped for an item already in view")
+		t.Fatal("stopped for something already in view or hidden")
 	}
-	e.Blocks[200].Flags = 1 // a monster steps into view
+	e.Blocks[seen[1]].Flags |= 1 // a monster steps into view
 	e.autoWatch()
 	if e.autoPath != nil {
 		t.Fatal("kept walking with a new monster in view")

@@ -19,18 +19,6 @@ func TestLinkItemTop(t *testing.T) {
 	}
 }
 
-func TestKbdMoveSlot(t *testing.T) {
-	e, err := New(testDir, nil)
-	if err != nil {
-		t.Skip(err)
-	}
-	e.kbdSlot = 0
-	e.kbdMoveSlot(2)
-	if want := int(e.X.U8(0x36d0 + 2)); e.kbdSlot != want {
-		t.Fatalf("slot %d want %d", e.kbdSlot, want)
-	}
-}
-
 // Floor sprites: ItemShapeMap indexes ds:ec9a, 14 large then 23 small from
 // slot 15 (O2106_0171); every mapped icon must land on a loaded shape.
 func TestItemFloorShapes(t *testing.T) {

@@ -101,7 +101,7 @@ func (e *Engine) pollMenu(m, strs int, mask uint32, bit int) int {
 	e.present()
 	e.Sys.Sleep(16)
 	mx, my := e.mouse()
-	if !e.KbdMode && inBox(mx, my, x, y1, x2, y2) {
+	if inBox(mx, my, x, y1, x2, y2) {
 		cur = (my - y1) / rowH
 	}
 	if ev, ok := e.poll(); ok {
@@ -247,19 +247,15 @@ func (e *Engine) frontEnd() error {
 			return err
 		}
 		e.CurrentBlock, e.CurrentDirection = 0x1ea, 0
-		if !e.KbdMode {
-			e.setHandItem(0)
-		}
+		e.setHandItem(0)
 	} else { // ports S0acd_0f72 (ds:a998 != 0: game loaded from the menu)
-		if !e.KbdMode {
-			e.setHandItem(e.HandItem)
-		}
+		e.setHandItem(e.HandItem)
 		if err := e.loadLevel(e.CurrentLevel); err != nil {
 			return err
 		}
 	}
 	// ports S0acd_0f72 tail (Run adds DrawPlayfield/DrawScene/setDim(7));
-	// ds:dcaa=1 is not modelled (see kbdCommand).
+	// ds:dcaa=1 is not modelled (ds:dcaa is only ever set to 1 or 2).
 	e.SpellbookOpen = false          // ds:f3b9
 	e.SelectedChar, e.InvChar = 0, 0 // ds:1f3a
 	e.loadPlayfield()

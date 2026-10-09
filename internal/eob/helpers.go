@@ -190,27 +190,11 @@ func (e *Engine) setHandItem(it int) {
 	}
 }
 
-// heldItem ports S0d1c_02dc: the mouse item, or the keyboard-selected slot.
-func (e *Engine) heldItem() int {
-	if !e.KbdMode {
-		return e.HandItem
-	}
-	return int(e.Chars[e.InvChar].Inventory[e.kbdSlot])
-}
+// heldItem ports S0d1c_02dc (the keyboard-mode slot branch is dropped).
+func (e *Engine) heldItem() int { return e.HandItem }
 
-// setHeldItem ports S0d1c_0304.
-func (e *Engine) setHeldItem(it int) {
-	if !e.KbdMode {
-		e.HandItem = it
-		return
-	}
-	e.Chars[e.InvChar].Inventory[e.kbdSlot] = uint16(it)
-	if e.GuiMode == 0 {
-		e.drawCharPanel(e.InvChar)
-	} else {
-		e.drawInvSlot(e.kbdSlot, true, 0)
-	}
-}
+// setHeldItem ports S0d1c_0304 (the keyboard-mode slot branch is dropped).
+func (e *Engine) setHeldItem(it int) { e.HandItem = it }
 
 // itemName ports S0bd2_05b5 (which prints the result).
 func (e *Engine) itemName(it int) string {

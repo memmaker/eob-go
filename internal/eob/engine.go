@@ -125,103 +125,101 @@ type Engine struct {
 	vcn *res.VCN
 	vmp []uint16
 
-	scene                  sceneState
-	col                    guiColors
-	ButtonDefs             []Button
-	handlers               map[uint32]func(arg int, ev Event) bool
-	btnKey                 int  // ds:fc82: 1/2 = button fired by its key/key2, 0 = mouse
-	txtCol, txtLine        int  // ds:fe52, fe54
-	txtFg, txtBg           int  // ds:811d, 811b
-	txtDim                 int  // ds:811f
-	kbdSlot                int  // ds:f51a, keyboard-selected inventory slot
-	kbdFloorPos            int  // ds:efb2, keyboard floor-item sub-position (-1 none)
-	kbdFloorFirst          int  // ds:f3ba, first item seen this cycle (-1 none)
-	dimInit                bool // ds:fec0
-	sceneUpdate            bool
-	StepCounter            int
-	clickFlags             int
-	book                   spellbook
-	Spells                 []Spell
-	spellCast              map[uint32]func()
-	spellHit               map[uint32]func(o *FlyingObject, blk int) bool
-	spellEnd               map[uint32]func(c int)
-	castFromItemFlag       bool
-	castItemSlot           int
-	savedCaster            int
-	savedCleric            bool
-	KbdMode                bool   // ds:814a, mouse disabled in preferences
-	NoSound                bool   // sound driver argument '4' (S07c8_0037)
-	hl, hlCol              int    // ds:54f2 / ds:54f4 keyboard highlight rect, colour index
-	hlNext                 uint32 // ds:fc5e
-	camp                   campState
-	savePath               string
-	tickOfs                uint32   // game time skipped by resting
-	menuItems              []string // menuCustom items
-	MiniMap                bool     // Tab: minimap overlay (extension)
-	autoPath               []int    // map auto-walk directions still to go (bigmap.go)
-	autoNext               uint32   // Millis of the next auto-walk step
-	padX, padY             int      // cursor at the last gamepad press (pad.go)
-	padNav                 bool     // D-pad drives the menu highlight
-	padClick               [3]bool  // A/B pressed as a click: release as one
-	attackNext             int      // F key cycle (extension): bit 0 front-row character, bit 1 secondary hand
-	miniLvl                int      // level the minimap colours below were taken from
-	miniFloor, miniWall    byte     // average floor / wall texture colours
-	miniDoor, miniOpenDoor byte     // light blue closed, dark blue open doors
-	miniPOI                byte     // yellow points of interest
-	seen                   map[int]*[1024]bool
-	pois                   map[int]map[int]string // level -> block -> label (extension, M map)
-	inGame                 bool
-	TurnBased              bool // Space: game time runs only for turnTicks after each action
-	turnLeft               int
-	spellCaster            int8
-	spellCasterChar        int8
-	spellTarget            int8
-	spellTargetFromTimer   int8
-	spellStartPos          int8
-	curSpell               int8
-	SelectedChar           int8
-	attackTarget           int
-	gameOver               bool
-	pathToggle             int
-	noMonsterSound         bool // ds:f442: monsters move during rest, silently and undrawn
-	monsterWasHit          bool
-	batchHits              bool
-	scriptTimerNext        uint32
-	ambientNext            uint32 // ds:fc5a
-	SpellbookOpen          bool
-	mouseX, mouseY         int
-	Timers                 [numTimers]Timer
-	timerHandlers          map[uint32]func(int)
-	ticks                  uint32
-	seed                   uint32
-	fxRnd                  []byte // ds:8484 byte RNG state (S1d8c_0000)
-	script                 scriptState
-	LevelFlags             [13]uint32
-	GlobalFlags            uint32
-	quit                   bool
-	dir                    string
-	menuKey                int // ds:fc7a, last key not handled by a menu
-	menuGap                int // ds:fc78
-	cg                     chargen
-	font                   *gfx.Font
-	font6, font8           *gfx.Font // ds:a9c0 / ds:fe5a
-	drawPage               int
-	GuiMode                int
-	InvChar                int
-	SwapChar               int8
-	swapBlink              bool
-	BarGraphs              bool
-	FlyingObjects          [10]FlyingObject
-	seqMode                bool   // ds:8110: MORE prompt instead of scrolling
-	textItemMode           bool   // ds:fe42
-	seqNPC                 int    // ds:efc6
-	textDat                []byte // TEXT.DAT (ds:df4e)
+	scene                sceneState
+	col                  guiColors
+	ButtonDefs           []Button
+	handlers             map[uint32]func(arg int, ev Event) bool
+	btnKey               int  // ds:fc82: 1/2 = button fired by its key/key2, 0 = mouse
+	txtCol, txtLine      int  // ds:fe52, fe54
+	txtFg, txtBg         int  // ds:811d, 811b
+	txtDim               int  // ds:811f
+	dimInit              bool // ds:fec0
+	sceneUpdate          bool
+	StepCounter          int
+	clickFlags           int
+	book                 spellbook
+	Spells               []Spell
+	spellCast            map[uint32]func()
+	spellHit             map[uint32]func(o *FlyingObject, blk int) bool
+	spellEnd             map[uint32]func(c int)
+	castFromItemFlag     bool
+	castItemSlot         int
+	savedCaster          int
+	savedCleric          bool
+	NoSound              bool   // sound driver argument '4' (S07c8_0037)
+	hl, hlCol            int    // ds:54f2 / ds:54f4 keyboard highlight rect, colour index
+	hlNext               uint32 // ds:fc5e
+	camp                 campState
+	savePath             string
+	tickOfs              uint32   // game time skipped by resting
+	menuItems            []string // menuCustom items
+	MiniMap              bool     // Tab: minimap overlay (extension)
+	autoPath             []int    // map auto-walk directions still to go (bigmap.go)
+	autoNext             uint32   // Millis of the next auto-walk step
+	padX, padY           int      // cursor at the last gamepad press (pad.go)
+	padNav               bool     // D-pad drives the menu highlight
+	padClick             [3]bool  // A/B pressed as a click: release as one
+	attackNext           int      // F key cycle (extension): bit 0 front-row character, bit 1 secondary hand
+	throwNext            int      // G key cycle (extension): character + 6 * hand
+	miniLvl              int      // level the minimap colours below were taken from
+	miniFloor, miniWall  byte     // average floor / wall texture colours
+	miniDoor             byte     // grey closed doors (open ones are floor)
+	miniPOI              byte     // yellow points of interest
+	seen                 map[int]*[1024]bool
+	pois                 map[int]map[int]string // level -> block -> label (extension, M map)
+	inGame               bool
+	TurnBased            bool // Space: game time runs only for turnTicks after each action
+	turnLeft             int
+	spellCaster          int8
+	spellCasterChar      int8
+	spellTarget          int8
+	spellTargetFromTimer int8
+	spellStartPos        int8
+	curSpell             int8
+	SelectedChar         int8
+	attackTarget         int
+	gameOver             bool
+	pathToggle           int
+	noMonsterSound       bool // ds:f442: monsters move during rest, silently and undrawn
+	monsterWasHit        bool
+	batchHits            bool
+	scriptTimerNext      uint32
+	ambientNext          uint32 // ds:fc5a
+	SpellbookOpen        bool
+	mouseX, mouseY       int
+	Timers               [numTimers]Timer
+	timerHandlers        map[uint32]func(int)
+	ticks                uint32
+	seed                 uint32
+	fxRnd                []byte // ds:8484 byte RNG state (S1d8c_0000)
+	script               scriptState
+	LevelFlags           [13]uint32
+	GlobalFlags          uint32
+	quit                 bool
+	dir                  string
+	menuKey              int // ds:fc7a, last key not handled by a menu
+	menuGap              int // ds:fc78
+	cg                   chargen
+	font                 *gfx.Font
+	font6, font8         *gfx.Font // ds:a9c0 / ds:fe5a
+	drawPage             int
+	GuiMode              int
+	InvChar              int
+	SwapChar             int8
+	swapBlink            bool
+	BarGraphs            bool
+	FlyingObjects        [10]FlyingObject
+	seqMode              bool   // ds:8110: MORE prompt instead of scrolling
+	textItemMode         bool   // ds:fe42
+	seqNPC               int    // ds:efc6
+	textDat              []byte // TEXT.DAT (ds:df4e)
 
 	// map colours of levers / buttons and pressure plates (extension)
-	miniSwitch, miniSwitchOn byte                       // light green, dark once activated
-	miniPlate, miniPlateOn   byte                       // light orange, dark once activated
+	miniSwitch, miniSwitchOn byte                       // light blue, dark once activated
+	miniPlate, miniPlateOn   byte                       // light purple, dark once activated
 	mazeWalls                map[int]*[1024][4]byte     // level -> walls as in LEVELn.MAZ
 	switches                 map[int]map[int]*switchUse // level -> switch / plate block -> use
+	bigOpen                  bool                       // full-screen map shown over the running game
 	autoSpots                map[int]int                // auto-walk: drawn blocks with monsters / items
 }
 

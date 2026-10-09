@@ -106,7 +106,6 @@ func (e *Engine) moveParty(nb int) {
 	e.runBlockScript(nb, 1)
 	e.updateAllMonsterDests()
 	e.StepCounter++
-	e.kbdFloorPos = -1
 	e.spendTurn()
 	e.sceneUpdate = true
 	e.printMessage(e.X.Str(0x5ab5))
@@ -126,7 +125,6 @@ func (e *Engine) flyingObjectsHitParty() {
 // turn ports the turn buttons S0acd_056c S0acd_0593.
 func (e *Engine) turn(d int) {
 	e.CurrentDirection = (e.CurrentDirection + d) & 3
-	e.kbdFloorPos = -1
 	e.sceneUpdate = true
 	e.spendTurn()
 }
@@ -244,6 +242,9 @@ func (e *Engine) Run(savePath string) (err error) {
 			if ev.Kind == EvMouseDown || ev.Kind == EvMouseUp {
 				e.mouseX, e.mouseY = ev.X, ev.Y
 			}
+			if e.bigOpen && e.bigMapEvent(ev) { // extension
+				continue
+			}
 			if e.autoPath != nil && (ev.Kind == EvKeyDown || ev.Kind == EvMouseDown) { // any input stops an auto-walk
 				e.autoPath = nil
 				continue
@@ -254,7 +255,11 @@ func (e *Engine) Run(savePath string) (err error) {
 			}
 			if e.GuiMode == 0 && (ev.Kind == EvKeyDown && ev.Key == KeyMap || // extension
 				ev.Kind == EvMouseDown && e.MiniMap && ev.X >= miniX-1 && ev.Y >= miniY-1 && ev.X <= miniX+miniW*miniCell && ev.Y <= miniY+miniH*miniCell) {
-				e.bigMap()
+				e.bigOpen = true
+				continue
+			}
+			if ev.Kind == EvKeyDown && ev.Key == KeyThrow && e.GuiMode == 0 { // extension
+				e.partyThrow()
 				continue
 			}
 			if ev.Kind == EvKeyDown && ev.Key == KeyAttack && e.GuiMode == 0 { // extension
@@ -269,8 +274,15 @@ func (e *Engine) Run(savePath string) (err error) {
 			if ev.Kind == EvMouseDown && ev.Button == 2 && e.GuiMode == 1 && e.eatFromSlot(ev) { // extension
 				continue
 			}
-			if !e.processButtons(ev, e.activeButtons()) && ev.Kind == EvKeyDown {
-				e.kbdCommand(ev.Key) // ports S0acd_0e6c (leftover input -> S0acd_0d9d)
+			if e.processButtons(ev, e.activeButtons()) || ev.Kind != EvKeyDown {
+				continue
+			}
+			switch { // ports S0acd_0e6c (leftover input -> S0acd_0d9d); only R is left of keyboard mode
+			case ev.Key == KeyEsc && e.GuiMode == 0: // extension: an Esc nothing else takes opens the camp, like C
+				ev.Key = 48
+				e.processButtons(ev, e.activeButtons())
+			case ev.Key == 0x34 && e.GuiMode != 2:
+				e.kbdClickWall()
 			}
 		}
 		if e.TurnBased && e.turnLeft == 0 { // world waits: hold game time
@@ -318,10 +330,12 @@ func (e *Engine) present() {
 		}
 		hx, hy = 8, 8
 	}
-	if e.MiniMap && e.inGame && e.GuiMode == 0 {
+	if e.bigOpen {
+		e.drawBigMap(15)
+	} else if e.MiniMap && e.inGame && e.GuiMode == 0 {
 		e.drawMiniMap(15)
 	}
-	if e.TurnBased { // turn-mode badge, top left of the 3D view; grey while a turn plays out
+	if e.TurnBased && !e.bigOpen { // turn-mode badge, top left of the 3D view; grey while a turn plays out
 		fg := byte(0xf)
 		if e.turnLeft > 0 {
 			fg = 8
@@ -343,6 +357,40 @@ func (e *Engine) ambientSound() {
 	}
 	e.ambientNext = e.ticks + uint32(e.rollDice(1, 10, 3)*18)
 	e.playSoundAt(0x1e, e.CurrentBlock+e.rollDice(1, 12, -1))
+}
+
+// partyThrow (extension) fires the next ranged weapon held in a hand: a
+// throwing weapon (type props 2) or a bow / sling with ammunition (3), cycling like partyAttack over every character's primary
+// hand, then every secondary hand; any rank may throw.
+func (e *Engine) partyThrow() {
+	for k := 0; k < 12; k++ {
+		n := e.throwNext
+		e.throwNext = (n + 1) % 12
+		c, hand := n%6, n/6
+		ch := &e.Chars[c]
+		it := int(ch.Inventory[hand])
+		if it == 0 || !e.charStatus(c, 0xd) || ch.DisabledSlots&(1<<hand) != 0 || !e.canUseHand(c, hand) {
+			continue
+		}
+		if p := e.ItemTypes[e.Items[it].Type].ExtraProps & 0x7f; p != 2 && (p != 3 || !e.hasAmmo(c, it)) {
+			continue
+		}
+		e.useItem(c, hand)
+		return
+	}
+}
+
+// hasAmmo reports whether character c carries ammunition for launcher it,
+// where fireMissile would find it (arrows: hands or quiver; else any slot).
+func (e *Engine) hasAmmo(c, it int) bool {
+	ammo := e.u8(dsAmmoType + int(e.Items[it].Type))
+	ch := &e.Chars[c]
+	for s, x := range ch.Inventory {
+		if x != 0 && int(e.Items[x].Type) == ammo && (ammo != 0x10 || s < 2 || s == 16) {
+			return true
+		}
+	}
+	return false
 }
 
 // partyAttack (extension) is a right click on a hand of a front-row

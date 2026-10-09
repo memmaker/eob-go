@@ -3,8 +3,7 @@ package eob
 // Minimap (extension, not in the original): Tab toggles a map of the
 // blocks the party has seen, drawn in the free playfield area right of the
 // compass.
-// ponytail: "seen" = the 18 blocks the renderer looked at, which can reveal
-// a block behind a wall; not saved with the game.
+// "Seen" = the view slots visibleSlots finds unobstructed.
 
 import "slices"
 
@@ -27,9 +26,46 @@ func (e *Engine) markSeen() {
 		e.seen[e.CurrentLevel] = s
 	}
 	s[e.CurrentBlock] = true
-	for _, b := range e.scene.visIndex {
-		s[b] = true
+	vis := e.visibleSlots()
+	for i, b := range e.scene.visIndex {
+		if vis[i] {
+			s[b] = true
+		}
 	}
+}
+
+// visibleSlots tells which of the 18 view slots (visIndex) the party can
+// actually see. Sight spreads from the party's block forward and sideways,
+// into a neighbour only through an open (passable) face of the block it
+// leaves: walls and closed doors are seen, what lies behind them is not.
+// ponytail: a grid flood, not a perspective test; it can see round a
+// corner the 3D view would hide at the far edge of a row.
+func (e *Engine) visibleSlots() [18]bool {
+	var vis [18]bool
+	slot := map[[2]int]int{} // forward, sideways (right +) -> slot
+	for i := 0; i < 18; i++ {
+		off := int(e.T.BlockIndex[i]) // direction 0: north is -32
+		dx := ((off+16)%32+32)%32 - 16
+		slot[[2]int{-(off - dx) / 32, dx}] = i
+	}
+	d := e.CurrentDirection
+	steps := []struct{ df, dl, dir int }{{1, 0, d}, {0, 1, (d + 1) & 3}, {0, -1, (d + 3) & 3}}
+	start := slot[[2]int{0, 0}]
+	vis[start] = true
+	for q := [][2]int{{0, 0}}; len(q) > 0; q = q[1:] {
+		c := q[0]
+		blk := e.scene.visIndex[slot[c]]
+		for _, st := range steps {
+			n := [2]int{c[0] + st.df, c[1] + st.dl}
+			i, ok := slot[n]
+			if !ok || vis[i] || e.WllWallFlags[e.Blocks[blk].Walls[st.dir]]&1 == 0 {
+				continue
+			}
+			vis[i] = true
+			q = append(q, n)
+		}
+	}
+	return vis
 }
 
 // drawMiniMap draws onto page p, north up.
@@ -59,7 +95,7 @@ func (e *Engine) drawPartyMark(p, x, y int) {
 	sc := e.Scr
 	dx := [4]int{0, 1, 0, -1}[e.CurrentDirection]
 	dy := [4]int{-1, 0, 1, 0}[e.CurrentDirection]
-	sc.FillRect(p, x-1, y-1, x+1, y+1, 0xf) // white: yellow marks points of interest
+	sc.FillRect(p, x-1, y-1, x+1, y+1, 0xf)   // white: yellow marks points of interest
 	sc.DrawLine(p, x, y, x+dx*2, y+dy*2, 0xf) // white: yellow marks points of interest
 }
 
@@ -84,9 +120,9 @@ func (e *Engine) mapColors() {
 	if e.miniLvl != e.CurrentLevel {
 		e.miniLvl = e.CurrentLevel
 		e.miniFloor, e.miniWall = e.vmpColor(8*22, 330, &e.vcn.ColBg, 55), e.vmpColor(330, len(e.vmp), &e.vcn.ColWall, 130)
-		e.miniDoor, e.miniOpenDoor, e.miniPOI = e.nearestColor(24, 36, 63), e.nearestColor(8, 12, 40), e.nearestColor(63, 63, 0)
-		e.miniSwitch, e.miniSwitchOn = e.nearestColor(24, 63, 24), e.nearestColor(0, 28, 0)
-		e.miniPlate, e.miniPlateOn = e.nearestColor(63, 44, 12), e.nearestColor(40, 20, 0)
+		e.miniDoor, e.miniPOI = e.nearestColor(40, 40, 40), e.nearestColor(63, 63, 0)
+		e.miniSwitch, e.miniSwitchOn = e.nearestColor(24, 40, 63), e.nearestColor(6, 10, 40)
+		e.miniPlate, e.miniPlateOn = e.nearestColor(42, 0, 42), e.nearestColor(20, 2, 27)
 	}
 }
 
@@ -96,7 +132,7 @@ func (e *Engine) mapCellColor(blk int) byte {
 	for _, w := range e.Blocks[blk].Walls {
 		if f := e.WllWallFlags[w]; f&8 != 0 { // door (drawSceneShapes' drawDoor test)
 			if f&1 != 0 { // passable: fully open (still moving counts as closed)
-				return e.miniOpenDoor
+				return e.miniFloor // open doors read as floor
 			}
 			return e.miniDoor
 		}
@@ -158,10 +194,12 @@ func (e *Engine) vmpColor(from, to int, col *[16]byte, pct int) byte {
 const plateWall = 28
 
 // switchUse is what the map knows about a lever, button or plate: whether
-// its script ran, and the other blocks that script changed (saved in the
-// .map file; the original walls come from LEVELn.MAZ).
+// its script changed lasting state other than walls (flags, items,
+// monsters), and the other blocks whose walls it changed (saved in the .map
+// file; the original walls come from LEVELn.MAZ). A script that only shows
+// a message, plays a sound or moves the party changes neither.
 type switchUse struct {
-	Ran     bool
+	Fired   bool
 	Targets []int
 }
 
@@ -178,8 +216,21 @@ func (e *Engine) trackSwitch(blk int) func() {
 	for i := range e.Blocks {
 		before[i] = e.Blocks[i].Walls
 	}
-	lvl := e.CurrentLevel
+	lvl, flags, items, monsters, hand := e.CurrentLevel, e.LevelFlags, slices.Clone(e.Items), e.Monsters, e.HandItem
 	return func() {
+		if e.CurrentLevel != lvl { // stairs / level change: block numbers mean something else
+			return
+		}
+		var targets []int
+		for i := range e.Blocks {
+			if i != blk && e.Blocks[i].Walls != before[i] {
+				targets = append(targets, i)
+			}
+		}
+		fired := flags != e.LevelFlags || !slices.Equal(items, e.Items) || monsters != e.Monsters || hand != e.HandItem
+		if !fired && targets == nil {
+			return
+		}
 		if e.switches == nil {
 			e.switches = map[int]map[int]*switchUse{}
 		}
@@ -191,23 +242,20 @@ func (e *Engine) trackSwitch(blk int) func() {
 			u = &switchUse{}
 			e.switches[lvl][blk] = u
 		}
-		u.Ran = true
-		if e.CurrentLevel != lvl { // the script changed level: block numbers mean something else
-			return
-		}
-		for i := range e.Blocks {
-			if i != blk && e.Blocks[i].Walls != before[i] && !slices.Contains(u.Targets, i) {
+		u.Fired = u.Fired || fired
+		for _, i := range targets {
+			if !slices.Contains(u.Targets, i) {
 				u.Targets = append(u.Targets, i)
 			}
 		}
 	}
 }
 
-// switchColor colours a block with a lever or button (green) or a pressure
-// plate (orange): light while it and every block its script ever changed
+// switchColor colours a block with a lever or button (blue) or a pressure
+// plate (purple): light while it and every block its script ever changed
 // are as the level started, dark otherwise. A button or plate whose script
-// changed no block (a message, an item) stays dark once it ran: nothing
-// resets it. A door button toggles its own block's door.
+// changed no walls but other lasting state (an item, a flag) stays dark:
+// that cannot be checked for a reset. A door button toggles its own block's door.
 func (e *Engine) switchColor(blk int) (byte, bool) {
 	cur, orig := e.Blocks[blk].Walls, e.Blocks[blk].Walls
 	m := e.mazeWalls[e.CurrentLevel]
@@ -218,7 +266,9 @@ func (e *Engine) switchColor(blk int) (byte, bool) {
 	if cur[0] != plateWall && orig[0] != plateWall {
 		found := false
 		for _, w := range cur {
-			if t := e.SpecialWallTypes[w]; t >= 1 && t <= 4 { // door button, wall button, lever up / down
+			// lever up / down; a clickable decoration only if its block script
+			// can change something (door buttons just follow the door colours)
+			if t := e.SpecialWallTypes[w]; t == 3 || t == 4 || t == 2 && e.scriptChanges(int(e.Blocks[blk].Script)) {
 				found, lever = true, lever || t >= 3
 			}
 		}
@@ -229,7 +279,7 @@ func (e *Engine) switchColor(blk int) (byte, bool) {
 	}
 	used := cur != orig
 	if u := e.switches[e.CurrentLevel][blk]; u != nil {
-		used = used || u.Ran && len(u.Targets) == 0 && !lever // a lever's own position is its state
+		used = used || u.Fired && len(u.Targets) == 0 && !lever // a lever's own position is its state
 		for _, b := range u.Targets {
 			used = used || m != nil && e.Blocks[b].Walls != m[b]
 		}
@@ -238,4 +288,108 @@ func (e *Engine) switchColor(blk int) (byte, bool) {
 		return dark, true
 	}
 	return light, true
+}
+
+// scriptChanges reports whether the level script starting at pos can, on
+// any path, change walls, flags, items or monsters, or change level (not
+// just print or play).
+func (e *Engine) scriptChanges(pos int) bool {
+	d := e.LevelINF
+	seen := map[int]bool{}
+	todo := []int{pos}
+	for len(todo) > 0 {
+		p := todo[len(todo)-1]
+		todo = todo[:len(todo)-1]
+		for p > 0 && p < len(d) && !seen[p] {
+			seen[p] = true
+			op := d[p]
+			p++
+			arg := func(i int) int8 { // i-th operand byte, 0 past the end
+				if p+i < len(d) {
+					return int8(d[p+i])
+				}
+				return 0
+			}
+			switch op {
+			case 0xff: // setWallType; -19 only turns the party
+				if arg(0) != -19 {
+					return true
+				}
+				p += 2
+			case 0xfe, 0xfd, 0xfc, 0xfb, 0xf9, 0xf5, 0xed, 0xea, 0xec: // walls, doors, monsters, flags, items, level
+				return true
+			case 0xf7: // setFlags; -28 is script-internal
+				if arg(0) != -28 {
+					return true
+				}
+				p++
+			case 0xfa: // teleport: moving monsters or items counts, the party not
+				if t := arg(0); t == -13 || t == -11 {
+					return true
+				} else if t == -15 {
+					p += 3
+				} else {
+					p += 5
+				}
+			case 0xf8: // message
+				for p < len(d) && d[p] != 0 {
+					p++
+				}
+				p += 3
+			case 0xf6:
+				p += 3
+			case 0xf4:
+				p += 2
+			case 0xf3:
+				p += 4
+			case 0xf2: // jump
+				p = int(le16(d[p:]))
+			case 0xf1, 0xf0: // end, return
+				p = 0
+			case 0xef: // call
+				todo = append(todo, int(le16(d[p:])))
+				p += 2
+			case 0xee: // condition: both branches
+				p = e.skipCond(p)
+				if p+2 <= len(d) {
+					todo = append(todo, int(le16(d[p:])))
+				}
+				p += 2
+			case 0xeb:
+				p += 3
+			case 0xe9:
+				p += 7
+			case 0xe8:
+				p += 2
+			case 0xe7:
+				p += 2
+			case 0xe6:
+				p++
+			}
+		}
+	}
+	return false
+}
+
+// skipCond returns the position of the jump target after the expression at p
+// (operand sizes as in scriptEval).
+func (e *Engine) skipCond(p int) int {
+	d := e.LevelINF
+	for p < len(d) {
+		op := d[p]
+		p++
+		switch op {
+		case 0xee:
+			return p
+		case 0xf7, 0xf3, 0xf1:
+			p += 2
+		case 0xf5, 0xe9, 0xdb:
+			p += 3
+		case 0xf2:
+			p += 4
+		case 0xf0, 0xef, 0xe7, 0xdd, 0xdc:
+			p++
+		}
+	}
+	return p
 }

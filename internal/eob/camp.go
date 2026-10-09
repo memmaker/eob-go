@@ -55,6 +55,10 @@ func (e *Engine) campStr(i int) string {
 
 func (e *Engine) campTmpl(t, o int) int { return int(e.X.FileU8(e.X.SegOffset(campBtnSeg, t*9+o))) }
 
+// campMouseKbd is the preferences button that switched between mouse and
+// keyboard mode (removed: both always work).
+const campMouseKbd = 0x10
+
 func (e *Engine) campMenu(m, o int) int { return int(e.X.I8(dsCampMenus + m*5 + o)) }
 
 // campPrint prints (shadowed) text with '\r' line breaks.
@@ -108,6 +112,9 @@ func (e *Engine) drawCampMenu(m int) {
 	e.camp.btns = e.camp.btns[:0]
 	for i := 0; i < e.campMenu(m, 3); i++ {
 		t := e.campMenu(m, 2) + i
+		if t+1 == campMouseKbd { // extension: mouse and keyboard always both work
+			continue
+		}
 		b := Button{ID: t + 1, Key: e.campTmpl(t, 5), X: e.campTmpl(t, 1) * 8, Y: e.campTmpl(t, 2),
 			W: e.campTmpl(t, 3) * 8, H: e.campTmpl(t, 4), Arg: e.campTmpl(t, 7) | e.campTmpl(t, 8)<<8}
 		e.camp.btns = append(e.camp.btns, b)
@@ -252,13 +259,11 @@ func (e *Engine) campConfirm(i int) bool {
 			cur ^= 1
 			continue
 		default:
-			if !e.KbdMode {
-				mx, my := e.mouse()
-				for _, b := range e.camp.btns {
-					if b.Arg&2 != 0 && inRect(mx, my, b.X, b.Y, b.X+b.W, b.Y+b.H) {
-						cur = b.ID - 0x21
-						break
-					}
+			mx, my := e.mouse()
+			for _, b := range e.camp.btns {
+				if b.Arg&2 != 0 && inRect(mx, my, b.X, b.Y, b.X+b.W, b.Y+b.H) {
+					cur = b.ID - 0x21
+					break
 				}
 			}
 			continue
@@ -329,9 +334,6 @@ func (e *Engine) campSelectChar(msg int) int {
 	di := 0
 	for di < 6 && !elig[di] {
 		di++
-	}
-	if !e.KbdMode {
-		di = -1
 	}
 	sel = -2
 	e.setFont(e.font6)
@@ -648,7 +650,7 @@ func (e *Engine) memorize(c int, pray bool) {
 			k = 0x801a
 		default:
 			mx, my := e.mouse()
-			if !e.KbdMode && inRect(mx, my, 8, 0x32, 0xa8, 0x7a) {
+			if inRect(mx, my, 8, 0x32, 0xa8, 0x7a) {
 				hl = min((my-0x32)/9, n-1)
 			}
 		}
@@ -884,7 +886,6 @@ func (e *Engine) openCamp() {
 			e.camp.labels[0x11] = fmt.Sprintf(e.X.Str(dsCampFmtPrefs), e.prefLabel(e.Opt80e8 != 0))
 			e.camp.labels[0x12] = fmt.Sprintf(e.X.Str(dsCampFmtPrefs+0xf), e.prefLabel(e.Opt80e6 != 0))
 			e.camp.labels[0x13] = fmt.Sprintf(e.X.Str(dsCampFmtPrefs+0x1f), e.prefLabel(e.OptF43c != 0))
-			e.camp.labels[0x14] = fmt.Sprintf(e.X.Str(dsCampFmtPrefs+0x33), e.prefLabel(!e.KbdMode))
 		}
 		if di != -1 {
 			e.drawCampMenu(di)
@@ -959,9 +960,6 @@ func (e *Engine) openCamp() {
 			e.OptF43c ^= 1
 			e.BarGraphs = e.OptF43c != 0
 			di, redrawChars = 2, true
-		case 0x8010:
-			e.KbdMode = !e.KbdMode
-			di, redrawChars = 2, true
 		case 0x8008:
 			if !e.campConfirm(0x37) {
 				di = 1
@@ -1032,17 +1030,15 @@ func (e *Engine) openCamp() {
 				if want > last {
 					want = first
 				}
-				if e.campTmpl(want-1, 7)&2 != 0 || want == hl {
+				if e.campTmpl(want-1, 7)&2 != 0 && want != campMouseKbd || want == hl {
 					break
 				}
 			}
 		default:
-			if !e.KbdMode {
-				mx, my := e.mouse()
-				for _, b := range e.camp.btns {
-					if b.Arg&2 != 0 && inRect(mx, my, b.X, b.Y, b.X+b.W, b.Y+b.H) {
-						want = b.ID
-					}
+			mx, my := e.mouse()
+			for _, b := range e.camp.btns {
+				if b.Arg&2 != 0 && inRect(mx, my, b.X, b.Y, b.X+b.W, b.Y+b.H) {
+					want = b.ID
 				}
 			}
 		}

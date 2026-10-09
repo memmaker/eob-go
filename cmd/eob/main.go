@@ -108,28 +108,57 @@ var keyMap = map[ebiten.Key]int{
 	ebiten.KeyMinus: eob.KeyMinus, ebiten.KeyEqual: eob.KeyEqual, ebiten.KeyNumpadSubtract: eob.KeyKPSub, ebiten.KeyNumpadAdd: eob.KeyKPAdd,
 	ebiten.KeyF1: eob.KeyF1, ebiten.KeyF2: eob.KeyF2, ebiten.KeyF3: eob.KeyF3, ebiten.KeyF4: eob.KeyF4, ebiten.KeyF5: eob.KeyF5, ebiten.KeyF6: eob.KeyF6,
 	// letter commands, as original key numbers (WASD/QE stay movement)
-	ebiten.KeyC: 48, ebiten.KeyI: 24, ebiten.KeyP: 26, ebiten.KeyU: 23, ebiten.KeyT: 21, ebiten.KeyG: 35, ebiten.KeyR: 52, ebiten.KeyM: eob.KeyMap,
+	ebiten.KeyC: 48, ebiten.KeyI: 24, ebiten.KeyP: 26, ebiten.KeyR: 52, ebiten.KeyG: eob.KeyThrow, ebiten.KeyM: eob.KeyMap,
 	ebiten.KeyDigit1: 2, ebiten.KeyDigit2: 3, ebiten.KeyDigit3: 4, ebiten.KeyDigit4: 5, ebiten.KeyDigit5: 6,
 	ebiten.KeyF: eob.KeyAttack, ebiten.KeyTab: eob.KeyTab, ebiten.KeyComma: 53, ebiten.KeyPeriod: 54,
 }
 
-// helpText is the Ctrl+H overlay (extension; the game clock pauses while open).
-var helpText = []string{
-	"KEYS          Ctrl+H / pad Back: close",
-	"W S  Up Dn    forward, back",
-	"A D  Lt Rt    step left, right",
-	"Q E           turn left, right",
-	"F1-F6 inventory  I inventory  P info",
-	"C camp  Esc close  1-5 , . spells",
-	"F attack  Space turn mode  Tab minimap",
-	"M or minimap click: map, POI notes",
-	"Kbd mode: U use T throw G get R wall",
-	"Ctrl+F or F7-F10    fullscreen",
-	"Pad: stick cursor, A/B click,",
-	" D-pad move/turn, LB/RB strafe,",
-	" X attack, L3 turn mode, Y map,",
-	" Start camp. Menus: D-pad, A ok, B back",
-}
+// helpSections is the Ctrl+H overlay (extension; the game clock pauses while
+// open): titled groups of key / action rows, laid out in two columns.
+var helpSections = [2][]struct {
+	title string
+	rows  [][2]string
+}{{
+	{"MOVE", [][2]string{
+		{"W S / Up Down", "forward, back"},
+		{"A D / Left Right", "step left, right"},
+		{"Q E", "turn left, right"},
+		{"Space", "turn mode on / off"},
+	}},
+	{"PARTY", [][2]string{
+		{"F1-F6", "character inventory"},
+		{"I", "inventory"},
+		{"P", "character info"},
+		{"C", "camp"},
+		{"F", "attack (front row)"},
+		{"G", "throw / shoot (next ranged)"},
+		{"1-5  , .", "spells"},
+		{"R", "use the wall in front"},
+	}},
+	{"MAP", [][2]string{
+		{"Tab", "minimap on / off"},
+		{"M / minimap click", "full map"},
+		{"Left click cell", "walk there"},
+		{"Right click cell", "note"},
+	}},
+}, {
+	{"GAMEPAD", [][2]string{
+		{"Stick", "cursor"},
+		{"A / B", "left / right click"},
+		{"D-pad", "move, turn"},
+		{"LB / RB", "step left, right"},
+		{"X", "attack"},
+		{"Y", "minimap"},
+		{"L3", "turn mode"},
+		{"Start", "camp"},
+		{"Menus", "D-pad, A ok, B back"},
+	}},
+	{"WINDOW", [][2]string{
+		{"Ctrl+F / F7-F10", "fullscreen"},
+		{"Ctrl+H / Esc", "close this help"},
+		{"Back (pad)", "help on / off"},
+	}},
+}}
 
 // extAscii holds the characters the original keyboard driver reports for
 // editing keys (read by the line editor S082c_000b).
@@ -161,6 +190,7 @@ var padButtons = map[ebiten.StandardGamepadButton]int{
 func (g *game) Update() error {
 	p := g.p
 	mx, my := ebiten.CursorPosition()
+	mx, my = mx/2, my/2 // the screen is laid out at 640x400 for the help text
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if p.done {
@@ -198,6 +228,11 @@ func (g *game) Update() error {
 		} else {
 			p.paused += time.Since(p.helpAt)
 		}
+		return nil
+	}
+	if p.help && inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
+		p.help = false
+		p.paused += time.Since(p.helpAt)
 		return nil
 	}
 	if p.help { // swallow input while help is shown
@@ -255,16 +290,45 @@ func (g *game) Draw(screen *ebiten.Image) {
 	g.img.WritePixels(g.p.frame)
 	help := g.p.help
 	g.p.mu.Unlock()
-	screen.DrawImage(g.img, nil)
+	var op ebiten.DrawImageOptions
+	op.GeoM.Scale(2, 2)
+	screen.DrawImage(g.img, &op)
 	if help {
-		vector.DrawFilledRect(screen, 4, 4, 312, 192, color.RGBA{0, 0, 0, 220}, false)
-		for i, l := range helpText {
-			text.Draw(screen, l, basicfont.Face7x13, 10, 18+i*14, color.White)
-		}
+		drawHelp(screen)
 	}
 }
 
-func (g *game) Layout(int, int) (int, int) { return 320, 200 }
+// drawHelp draws the help overlay at 640x400, so basicfont comes out half the
+// size of the 320x200 game pixels.
+func drawHelp(screen *ebiten.Image) {
+	var (
+		title = color.RGBA{255, 210, 90, 255}
+		key   = color.RGBA{120, 200, 255, 255}
+		desc  = color.RGBA{225, 225, 225, 255}
+		rule  = color.RGBA{90, 90, 120, 255}
+	)
+	vector.DrawFilledRect(screen, 12, 12, 616, 376, color.RGBA{8, 8, 20, 235}, false)
+	vector.StrokeRect(screen, 12, 12, 616, 376, 2, rule, false)
+	face := basicfont.Face7x13
+	text.Draw(screen, "EYE OF THE BEHOLDER - CONTROLS", face, 32, 38, title)
+	vector.DrawFilledRect(screen, 32, 46, 576, 1, rule, false)
+	for col, secs := range helpSections {
+		x, y := 32+col*300, 70
+		for _, sec := range secs {
+			text.Draw(screen, sec.title, face, x, y, title)
+			y += 16
+			for _, r := range sec.rows {
+				text.Draw(screen, r[0], face, x+8, y, key)
+				text.Draw(screen, r[1], face, x+136, y, desc)
+				y += 14
+			}
+			y += 12
+		}
+	}
+	text.Draw(screen, "Mouse, keyboard and gamepad all work at the same time.", face, 32, 370, rule)
+}
+
+func (g *game) Layout(int, int) (int, int) { return 640, 400 }
 
 func main() {
 	dir := flag.String("data", os.Getenv("EOB_DATA"), "path to your original Eye of the Beholder directory")

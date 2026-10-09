@@ -274,7 +274,6 @@ func (e *Engine) scriptOp(op, pos int) int {
 		switch t {
 		case -15:
 			e.CurrentDirection = (e.CurrentDirection + n) & 3
-			e.kbdFloorPos = -1
 			e.sceneUpdate = true
 		case -11:
 			for i := range e.FlyingObjects {

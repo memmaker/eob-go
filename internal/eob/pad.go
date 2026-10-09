@@ -24,6 +24,10 @@ func (e *Engine) pollGame() (Event, bool) { return e.pollPad(true) }
 func (e *Engine) pollPad(game bool) (Event, bool) {
 	for {
 		ev, ok := e.Sys.PollEvent()
+		if ok && !game && ev.Kind == EvKeyDown { // keys drive the highlight until the mouse moves
+			e.padNav = true
+			e.padX, e.padY = e.Sys.Mouse()
+		}
 		if !ok || ev.Kind != EvPadDown && ev.Kind != EvPadUp {
 			return ev, ok
 		}

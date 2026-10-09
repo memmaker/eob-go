@@ -351,7 +351,7 @@ func (e *Engine) cgRollStats(c int) {
 func (e *Engine) cgModify() {
 	ch := &e.Chars[e.cg.slot]
 	vals := []*int8{&ch.StrCur, &ch.IntCur, &ch.WisCur, &ch.DexCur, &ch.ConCur, &ch.ChaCur, &ch.HPCur}
-	var none int8 // the original passes a null pointer
+	var none int8  // the original passes a null pointer
 	e.flushInput() // O20f6_1ae3
 	e.cgDrawSheet(e.cg.slot, 3)
 	for si := 0; si >= 0 && si <= 6; {
@@ -590,13 +590,11 @@ func (e *Engine) cgSelectFace() {
 			start = e.cgNextFace(start+1, 1)
 		}
 		start = first
-		r := 0
+		r, k := 0, 0
 		for r == 0 {
 			e.cgBlink()
-			k := e.cgInput(btns)
-			if e.KbdMode {
-				e.highlight(row + 10)
-			}
+			k = e.cgInput(btns)
+			e.highlight(row + 10)
 			switch k {
 			case KeyEnter, KeyKP5:
 				r = 3
@@ -610,18 +608,16 @@ func (e *Engine) cgSelectFace() {
 				row, r = k&0xff-3, 3
 			}
 		}
-		if e.KbdMode {
-			e.highlight(-1)
-		}
+		e.highlight(-1)
 		switch r {
 		case 1:
-			if row == 0 || !e.KbdMode {
+			if row == 0 || k == 0x8001 { // keys move the row, the arrow buttons the faces
 				start = e.cgNextFace(start-1, -1)
 			} else {
 				row--
 			}
 		case 2:
-			if row == 3 || !e.KbdMode {
+			if row == 3 || k == 0x8002 {
 				start = e.cgNextFace(start+1, 1)
 			} else {
 				row++
