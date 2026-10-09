@@ -83,6 +83,7 @@ func (e *Engine) drawMenu(m, strs int, mask uint32, bit, gap int) {
 		}
 	}
 	e.present()
+	e.flushInput()
 }
 
 // pollMenu ports S14ef_0274: handles one input event and returns the chosen

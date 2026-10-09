@@ -76,6 +76,20 @@ func (e *Engine) moveRel(rel int) {
 func (e *Engine) cantGo() {
 	e.printMessage(e.X.Str(dsStrCantGo))
 	e.playSound(0x1d)
+	e.flushInput()
+}
+
+// flushInput ports S1aad_0480: drops the pending input queue (a quit is kept).
+func (e *Engine) flushInput() {
+	for {
+		ev, ok := e.Sys.PollEvent()
+		if !ok {
+			return
+		}
+		if ev.Kind == EvQuit {
+			e.quit = true
+		}
+	}
 }
 
 // moveParty ports S122e_0001.
