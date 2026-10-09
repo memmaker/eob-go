@@ -258,6 +258,10 @@ func (e *Engine) Run(savePath string) (err error) {
 				e.bigOpen = true
 				continue
 			}
+			if ev.Kind == EvKeyDown && ev.Key == KeyPickup && e.GuiMode == 0 { // extension
+				e.pickupFront()
+				continue
+			}
 			if ev.Kind == EvKeyDown && ev.Key == KeyThrow && e.GuiMode == 0 { // extension
 				e.partyThrow()
 				continue

@@ -9,6 +9,7 @@ const (
 	KeyAttack = 34    // F (extension: front-row attack, alternating)
 	KeyMap    = 0x200 // M (extension: full-screen map; the wall click moved to R)
 	KeyThrow  = 0x201 // G (extension: throw the next hand-held throwing weapon)
+	KeyPickup = 0x202 // T (extension: pick up the next item in the party's block)
 	KeyBack   = 15
 	KeyMinus  = 12
 	KeyEqual  = 13

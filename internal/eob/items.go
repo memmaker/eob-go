@@ -85,13 +85,13 @@ const (
 // clickedFloor ports S0acd_0644 (areas 0..3 at the bottom of the 3D view).
 // Extension: a left click with an empty hand stows the item in the backpack
 // of the character with the most free space (falls back to the hand).
-func (e *Engine) clickedFloor(area, button int) {
+func (e *Engine) clickedFloor(area, button int) bool {
 	blk := e.CurrentBlock
 	if area >= 2 {
 		blk = (e.CurrentBlock + int(e.X.I8(dsFloorBlockOffs+e.CurrentDirection))) & 0x3ff
 		w := e.Blocks[blk].Walls[e.scene.drawVarDown]
 		if e.WllWallFlags[w]&0xb == 0 {
-			return
+			return false
 		}
 	}
 	pos := e.u8(dsFloorItemPos + e.CurrentDirection*4 + area)
@@ -106,7 +106,7 @@ func (e *Engine) clickedFloor(area, button int) {
 			}
 		}
 		if it == 0 {
-			return
+			return false
 		}
 		e.runBlockScript(blk, 8)
 		if !(button == 1 && e.stowItem(it)) {
@@ -119,6 +119,15 @@ func (e *Engine) clickedFloor(area, button int) {
 	}
 	e.sceneUpdate = true
 	e.spendTurn()
+	return true
+}
+
+// pickupFront (extension, T key) stows the next item lying in the party's
+// own block, as a left click on the near floor would.
+func (e *Engine) pickupFront() {
+	if e.HandItem == 0 && !e.clickedFloor(0, 1) {
+		e.clickedFloor(1, 1)
+	}
 }
 
 // stowItem gives item it to the character who suits it best, false if

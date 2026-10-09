@@ -108,7 +108,7 @@ var keyMap = map[ebiten.Key]int{
 	ebiten.KeyMinus: eob.KeyMinus, ebiten.KeyEqual: eob.KeyEqual, ebiten.KeyNumpadSubtract: eob.KeyKPSub, ebiten.KeyNumpadAdd: eob.KeyKPAdd,
 	ebiten.KeyF1: eob.KeyF1, ebiten.KeyF2: eob.KeyF2, ebiten.KeyF3: eob.KeyF3, ebiten.KeyF4: eob.KeyF4, ebiten.KeyF5: eob.KeyF5, ebiten.KeyF6: eob.KeyF6,
 	// letter commands, as original key numbers (WASD/QE stay movement)
-	ebiten.KeyC: 48, ebiten.KeyI: 24, ebiten.KeyP: 26, ebiten.KeyR: 52, ebiten.KeyG: eob.KeyThrow, ebiten.KeyM: eob.KeyMap,
+	ebiten.KeyC: 48, ebiten.KeyI: 24, ebiten.KeyP: 26, ebiten.KeyR: 52, ebiten.KeyG: eob.KeyThrow, ebiten.KeyT: eob.KeyPickup, ebiten.KeyM: eob.KeyMap,
 	ebiten.KeyDigit1: 2, ebiten.KeyDigit2: 3, ebiten.KeyDigit3: 4, ebiten.KeyDigit4: 5, ebiten.KeyDigit5: 6,
 	ebiten.KeyF: eob.KeyAttack, ebiten.KeyTab: eob.KeyTab, ebiten.KeyComma: 53, ebiten.KeyPeriod: 54,
 }
@@ -131,15 +131,10 @@ var helpSections = [2][]struct {
 		{"P", "character info"},
 		{"C", "camp"},
 		{"F", "attack (front row)"},
-		{"G", "throw / shoot (next ranged)"},
+		{"G", "throw / shoot ranged"},
+		{"T", "pick up item"},
 		{"1-5  , .", "spells"},
 		{"R", "use the wall in front"},
-	}},
-	{"MAP", [][2]string{
-		{"Tab", "minimap on / off"},
-		{"M / minimap click", "full map"},
-		{"Left click cell", "walk there"},
-		{"Right click cell", "note"},
 	}},
 }, {
 	{"GAMEPAD", [][2]string{
@@ -157,6 +152,12 @@ var helpSections = [2][]struct {
 		{"Ctrl+F / F7-F10", "fullscreen"},
 		{"Ctrl+H / Esc", "close this help"},
 		{"Back (pad)", "help on / off"},
+	}},
+	{"MAP", [][2]string{
+		{"Tab", "minimap on / off"},
+		{"M / minimap click", "full map"},
+		{"Left click cell", "walk there"},
+		{"Right click cell", "note"},
 	}},
 }}
 
@@ -313,19 +314,18 @@ func drawHelp(screen *ebiten.Image) {
 	text.Draw(screen, "EYE OF THE BEHOLDER - CONTROLS", face, 32, 38, title)
 	vector.DrawFilledRect(screen, 32, 46, 576, 1, rule, false)
 	for col, secs := range helpSections {
-		x, y := 32+col*300, 70
+		x, y := 32+col*316, 70
 		for _, sec := range secs {
 			text.Draw(screen, sec.title, face, x, y, title)
 			y += 16
 			for _, r := range sec.rows {
 				text.Draw(screen, r[0], face, x+8, y, key)
-				text.Draw(screen, r[1], face, x+136, y, desc)
+				text.Draw(screen, r[1], face, x+132, y, desc)
 				y += 14
 			}
 			y += 12
 		}
 	}
-	text.Draw(screen, "Mouse, keyboard and gamepad all work at the same time.", face, 32, 370, rule)
 }
 
 func (g *game) Layout(int, int) (int, int) { return 640, 400 }
