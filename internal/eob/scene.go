@@ -496,7 +496,7 @@ func (e *Engine) drawMonsters(index int) {
 		x := int(e.T.ShapeCoords[ci]) + 88
 		y := int(e.T.ShapeCoords[ci+1]) + 127
 		if props.U15 == 1 && (a == 1 || a > 3) {
-			y += int(e.T.MonYOffs[dm])
+			y += int(int8(e.T.MonYOffs[steps])) // 0faf: indexed by scale steps, cbw
 		}
 		x -= shp.W() / 2
 		y -= shp.H
@@ -559,9 +559,11 @@ func (e *Engine) DrawScene(refresh bool) {
 	if refresh && !e.noMonsterSound {
 		e.Scr.CopyRegion(0, 0, 0, 0, 176, 120, scenePage, 0)
 	}
+	e.playSoundUpdate(0) // 1fc6: flush the queued sound
 	if !e.SpellbookOpen { // ds:f3b9: the spell menu covers the compass
 		e.drawCompass()
 	}
+	e.sceneUpdate = false // ds:df4c
 }
 
 // drawCompass ports O2116_1ede.

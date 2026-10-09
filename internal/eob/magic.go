@@ -613,7 +613,7 @@ func (e *Engine) allocTempItemType(invFlags, handFlags, ac, allowed, dice, pips,
 	}
 	t := &e.ItemTypes[si%len(e.ItemTypes)]
 	t.InvFlags = uint16(invFlags)
-	t.Unk1 = 0
+	t.RequiredHands = 0 // es:[bx+6]
 	t.HandFlags = uint16(handFlags)
 	t.ArmorClass = int8(ac)
 	t.AllowedClasses = byte(allowed)
@@ -644,7 +644,9 @@ func (e *Engine) allocTempItem(name, icon, value, typ int) int {
 	it.Icon = int8(icon)
 	it.Type = int8(typ)
 	it.Value = int8(value)
-	it.Block, it.Pos, it.NameUnid, it.NameID, it.Next, it.Prev = 0, 0, 0, 0, 0, 0
+	// Original bug: clears byte ds:8dd5 (Items[0].Pos), not this item's Pos.
+	e.Items[0].Pos = 0
+	it.Block, it.NameUnid, it.NameID, it.Next, it.Prev = 0, 0, 0, 0, 0
 	return si
 }
 
