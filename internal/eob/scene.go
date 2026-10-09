@@ -174,7 +174,9 @@ func (e *Engine) generateBlockDrawingBuffer(block, dir int) {
 	}
 }
 
-// drawVcnBlocks ports the VGA path of S17a6_03e7 onto page 2.
+// drawVcnBlocks ports the VGA path of S17a6_03e7 onto page 2. The
+// ColBg/ColWall maps are the cs:3af/3bf tables installed by S17a6_037e
+// (ports S17a6_037e: 16-byte copies of the .VCN header maps).
 func (e *Engine) drawVcnBlocks() {
 	dst := e.Scr.Pages[scenePage]
 	v := e.vcn

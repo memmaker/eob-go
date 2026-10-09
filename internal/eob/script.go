@@ -50,7 +50,7 @@ func (e *Engine) rd16(p *int) int { v := int(le16(e.LevelINF[*p:])); *p += 2; re
 func (e *Engine) scriptOp(op, pos int) int {
 	s := &e.script
 	switch byte(op) {
-	case 0xff: // setWallType
+	case 0xff: // setWallType, ports S122e_0960 (opcode table ds:5a4d)
 		switch e.rds8(&pos) {
 		case -9:
 			blk, v := e.rd16(&pos), byte(e.rd8(&pos))
@@ -64,7 +64,7 @@ func (e *Engine) scriptOp(op, pos int) int {
 			e.CurrentDirection = e.rd8(&pos)
 		}
 		e.sceneUpdate = true
-	case 0xfe: // changeWallType
+	case 0xfe: // changeWallType, ports S122e_0a16 (opcode table ds:5a4d)
 		switch e.rds8(&pos) {
 		case -9:
 			blk, a, b := e.rd16(&pos), byte(e.rd8(&pos)), byte(e.rd8(&pos))
@@ -79,18 +79,18 @@ func (e *Engine) scriptOp(op, pos int) int {
 			e.toggleDoor(e.rd16(&pos), -1)
 		}
 		e.sceneUpdate = true
-	case 0xfd:
+	case 0xfd: // ports S122e_0b23 (opcode table ds:5a4d)
 		e.openDoor(e.rd16(&pos))
-	case 0xfc:
+	case 0xfc: // ports S122e_0b56 (opcode table ds:5a4d)
 		e.closeDoor(e.rd16(&pos))
-	case 0xfb: // createMonster
+	case 0xfb: // createMonster, ports S122e_0b89 (opcode table ds:5a4d)
 		pos++
 		a := e.rds8(&pos)
 		blk := e.rd16(&pos)
 		p, d, t, sh, m, i := e.rds8(&pos), e.rds8(&pos), e.rds8(&pos), e.rds8(&pos), e.rds8(&pos), e.rds8(&pos)
 		ri, fi := e.rd16(&pos), e.rd16(&pos)
 		e.createMonster(a, blk, p, d, t, sh, m, i, ri, fi)
-	case 0xfa: // teleport
+	case 0xfa: // teleport, ports S122e_0d57 (opcode table ds:5a4d)
 		typ := e.rds8(&pos)
 		src := 0
 		if typ != -15 {
@@ -138,7 +138,7 @@ func (e *Engine) scriptOp(op, pos int) int {
 		pos++
 		fg, bg := e.rd8(&pos), e.rd8(&pos)
 		e.printColoredMessage(text, byte(fg), byte(bg))
-	case 0xf7: // setFlags
+	case 0xf7: // setFlags, ports S122e_1097 (opcode table ds:5a4d)
 		switch e.rds8(&pos) {
 		case -28:
 			s.flagFB76 = true
@@ -164,7 +164,7 @@ func (e *Engine) scriptOp(op, pos int) int {
 		} else {
 			e.playSound(id)
 		}
-	case 0xf5: // removeFlags (always 2 bytes)
+	case 0xf5: // removeFlags (always 2 bytes), ports S122e_11e8 (opcode table ds:5a4d)
 		sub, bit := e.rds8(&pos), e.rd8(&pos)
 		switch sub {
 		case -17:
@@ -172,7 +172,7 @@ func (e *Engine) scriptOp(op, pos int) int {
 		case -16:
 			e.LevelFlags[12] &^= 1 << uint(bit)
 		}
-	case 0xf4: // modifyCharacterHitPoints
+	case 0xf4: // modifyCharacterHitPoints, ports S122e_126e (opcode table ds:5a4d)
 		c, v := e.rds8(&pos), e.rds8(&pos)
 		if c == -1 {
 			for i := 0; i < 6; i++ {
@@ -181,7 +181,7 @@ func (e *Engine) scriptOp(op, pos int) int {
 		} else {
 			e.healChar(c, v)
 		}
-	case 0xf3: // calcAndInflictCharacterDamage
+	case 0xf3: // calcAndInflictCharacterDamage, ports S122e_12ce (opcode table ds:5a4d)
 		c, a, b, inc := e.rds8(&pos), e.rd8(&pos), e.rd8(&pos), e.rds8(&pos)
 		if c == -1 {
 			for i := 0; i < 6; i++ {
@@ -200,16 +200,16 @@ func (e *Engine) scriptOp(op, pos int) int {
 			}
 			e.damageChar(c, a) // original passes the unrolled value here
 		}
-	case 0xf2: // jump
+	case 0xf2: // jump, ports S122e_139d (opcode table ds:5a4d)
 		pos = e.rd16(&pos)
-	case 0xf1: // end
+	case 0xf1: // end, ports S122e_13d1 (opcode table ds:5a4d)
 		s.abort = true
-	case 0xf0: // return
+	case 0xf0: // return, ports S122e_13e0 (opcode table ds:5a4d)
 		if n := len(s.stack); n > 0 {
 			pos = s.stack[n-1]
 			s.stack = s.stack[:n-1]
 		}
-	case 0xef: // call
+	case 0xef: // call, ports S122e_1422 (opcode table ds:5a4d)
 		t := e.rd16(&pos)
 		if len(s.stack) < 10 {
 			s.stack = append(s.stack, pos)
@@ -217,7 +217,7 @@ func (e *Engine) scriptOp(op, pos int) int {
 		}
 	case 0xee:
 		pos = e.scriptEval(pos)
-	case 0xed: // deleteItem
+	case 0xed: // deleteItem, ports S122e_1a3b (opcode table ds:5a4d)
 		sub := e.rds8(&pos)
 		switch sub {
 		case -1:
@@ -234,11 +234,11 @@ func (e *Engine) scriptOp(op, pos int) int {
 		dir := e.rds8(&pos)
 		e.scriptLoadNewLevel(lvl, blk, dir)
 		s.abort = true
-	case 0xeb: // increasePartyExperience
+	case 0xeb: // increasePartyExperience, ports S122e_1b5a (opcode table ds:5a4d)
 		if e.rd8(&pos) == 0xe2 {
 			e.increasePartyExperience(e.rd16(&pos))
 		}
-	case 0xea: // createItem
+	case 0xea: // createItem, ports S122e_1b9a (opcode table ds:5a4d)
 		tmpl := e.rd16(&pos)
 		blk := e.rd16(&pos)
 		it := e.duplicateItem(tmpl)
@@ -246,11 +246,11 @@ func (e *Engine) scriptOp(op, pos int) int {
 			if blk == 0xffff && e.HandItem == 0 {
 				e.setHandItem(it)
 			} else {
-				e.linkItemToBlock(blk, it, int(e.LevelINF[pos]))
+				e.linkItemToBlock(blk, it, int(int8(e.LevelINF[pos])))
 			}
 		}
 		pos++
-	case 0xe9: // launchObject
+	case 0xe9: // launchObject, ports S122e_0c4d (opcode table ds:5a4d)
 		isSpell := e.LevelINF[pos] == 0xdf
 		pos++
 		obj := e.rd8(&pos)
@@ -265,9 +265,10 @@ func (e *Engine) scriptOp(op, pos int) int {
 				e.Items[it].Block = -1
 			}
 		} else {
+			// the original zeroes ds:f43d around S0ef3_097b, which never reads it
 			e.launchSpellObject(-1, obj, blk, start, dir)
 		}
-	case 0xe8: // turnParty / turn flying objects
+	case 0xe8: // turnParty / turn flying objects, ports S122e_1c16 (opcode table ds:5a4d)
 		t, n := e.rds8(&pos), e.rd8(&pos)
 		switch t {
 		case -15:
@@ -282,7 +283,7 @@ func (e *Engine) scriptOp(op, pos int) int {
 				}
 			}
 		}
-	case 0xe7: // identifyItems
+	case 0xe7: // identifyItems, ports S122e_1cad (opcode table ds:5a4d)
 		blk := e.rd16(&pos)
 		if blk == e.CurrentBlock {
 			for c := 0; c < 6; c++ {
@@ -299,7 +300,7 @@ func (e *Engine) scriptOp(op, pos int) int {
 			}
 		}
 		e.identifyBlockItems(blk)
-	case 0xe6: // sequence
+	case 0xe6: // sequence, ports S122e_1d76 (opcode table ds:5a4d)
 		e.runSequence(e.rd8(&pos))
 	}
 	return pos
@@ -362,7 +363,7 @@ func (e *Engine) scriptEval(pos int) int {
 			blk := e.rd16(&pos)
 			push(e.findBlockItem(blk, -1, t, true))
 		case 0xf3:
-			push(b2i(e.Blocks[e.rd16(&pos)].Flags&1 != 0))
+			push(b2i(e.Blocks[e.rd16(&pos)].Flags&1 != 0)) // ports S122e_0137
 		case 0xf2:
 			it := e.rd16(&pos)
 			blk := e.rd16(&pos)

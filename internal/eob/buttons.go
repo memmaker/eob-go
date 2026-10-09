@@ -34,6 +34,7 @@ func (e *Engine) loadButtons() {
 }
 
 // buttonByID returns a button definition by its original id.
+// buttonByID ports S1658_01a2 (find by id, NULL if absent).
 func (e *Engine) buttonByID(id int) *Button {
 	for i := range e.ButtonDefs {
 		if e.ButtonDefs[i].ID == id {
@@ -58,7 +59,8 @@ func (e *Engine) buttonList(ds, n int) []int {
 }
 
 // processButtons ports the matching rules of the original GUI processor
-// (S16a5_00bd): keys match key/key2; mouse buttons trigger on press or
+// (ports S16a5_00bd; its pre-callback hook ds:fc7c is only ever set to NULL,
+// by S16a5_0d78 at startup, so it is omitted: ports S16a5_0d78): keys match key/key2; mouse buttons trigger on press or
 // release depending on button flags (0x800/0x100 left, 0x8000/0x1000 right).
 // A callback returning false lets processing continue with the next button.
 func (e *Engine) processButtons(ev Event, list []int) bool {

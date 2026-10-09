@@ -78,7 +78,7 @@ func (e *Engine) drawSpellbook() {
 		}
 		y := 0x84 + si*6
 		switch {
-		case si < 6 && v > 0:
+		case si < 6 && v >= 0: // original also prints names[0] for empty slots
 			e.Scr.PrintText(e.font, p, e.farStr(sb.names+int(v)*4), 0x49, y, fg, bg)
 		case si == 6:
 			s := e.X.Str(dsStrAbortSpell)
@@ -204,6 +204,7 @@ func (e *Engine) castSpell(sp, itemSlot int) {
 	if s.Flags&1 != 0 {
 		// target prompt ports S0ef3_059d (its S0cf7_0211 button list = sb.waiting)
 		e.printMessageNow(e.X.Str(dsStrWhichChar))
+		e.playSound(0x4f)
 		sb.waiting = true
 		return
 	}

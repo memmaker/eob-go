@@ -511,6 +511,8 @@ func (e *Engine) hpMinRoll(class, con, a, b, c int) int {
 
 // highlight ports S0d1c_0454: keyboard selection frame i (rects ds:5482)
 // cycling through the colours at ds:1ce7, one step per tick; -1 erases.
+// The frame is S1a1f_000c (ports S1a1f_000c via DrawRect: same 4 lines; its
+// 0..319/0..199 clamp is a no-op for the on-screen ds:5482 rects).
 func (e *Engine) highlight(i int) {
 	now := e.Sys.Millis() / tickMillis
 	rect := func(c int) {
@@ -696,6 +698,22 @@ func (e *Engine) cgSelect(m, title, strs int, mask uint32, n, backX int, escBack
 	e.drawMenu(m, strs, mask, 0, 0)
 	for {
 		e.cgBlink()
+		if !escBack { // 207a: while the mouse rests on Back, input is read and dropped; a click goes back
+			if mx, my := e.Sys.Mouse(); inBox(mx, my, backX, 0xab, 0x12f, 0xbb) {
+				e.present()
+				e.Sys.Sleep(16)
+				if ev, ok := e.Sys.PollEvent(); ok {
+					if ev.Kind == EvQuit {
+						panic(errQuit)
+					}
+					if ev.Kind == EvMouseDown {
+						e.cgPress(5)
+						return KeyEsc
+					}
+				}
+				continue
+			}
+		}
 		r := e.pollMenu(m, strs, mask, 0)
 		k := e.menuKey
 		if (escBack && (k == KeyEsc || k == 0x32)) || ((k == 0x41 || k == 0x42) && inBox(e.mouseX, e.mouseY, backX, 0xab, 0x12f, 0xbb)) {

@@ -11,7 +11,8 @@ type Font struct {
 	glyphs [128][]byte
 }
 
-// LoadFont parses a .FNT file.
+// LoadFont parses a .FNT file; ports S1a47_0005 (whose size/header checks
+// all pass for the shipped FONT6/FONT8).
 func LoadFont(b []byte) (*Font, error) {
 	if len(b) < 0x104 {
 		return nil, errors.New("font too short")

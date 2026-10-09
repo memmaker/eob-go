@@ -37,13 +37,18 @@ const (
 
 // DrawShape ports S082c_063b S082c_0681 S082c_06c7 S082c_070d (plain/flip/
 // remap/flip+remap via flags; 070d does not force x even, Go does).
+// The dim-relative inner draws (x+dim.X*8, y+dim.Y, clip to dim) are folded in:
+// The dim argument stands for the current-dim select S1a29_0189 (ports S1a29_0189).
+// DrawShape also ports S1a29_000f S1a29_004d S1a29_008b S1a29_00c9.
 // DrawShape draws shp at absolute (x,y) on page, clipped to dim (as the
 // original: x is forced even; clipping window = dim rectangle).
 func (s *Screen) DrawShape(page int, shp *Shape, x, y, dim int, flags int) {
 	if shp == nil {
 		return
 	}
-	x &^= 1
+	if flags&(DrawFlip|DrawRemap) != DrawFlip|DrawRemap {
+		x &^= 1
+	}
 	cx1, cy1, cx2, cy2 := 0, 0, 320, 200
 	if dim >= 0 && dim < len(s.Dims) {
 		d := s.Dims[dim]
@@ -110,6 +115,8 @@ func (s *Screen) FillRect(page, x1, y1, x2, y2 int, c byte) {
 }
 
 // CopyRegion copies a w x h pixel rectangle between pages.
+// CopyRegion ports S19f3_000e (pixel units; the original takes x/w in 8px
+// columns and clips the same way).
 func (s *Screen) CopyRegion(sx, sy, dx, dy, w, h, src, dst int) {
 	a, b := s.Pages[src], s.Pages[dst]
 	tmp := make([]byte, w)
@@ -134,7 +141,7 @@ func (s *Screen) CopyRegion(sx, sy, dx, dy, w, h, src, dst int) {
 	}
 }
 
-// CopyPage copies a full page.
+// CopyPage copies a full page; ports S19ec_002a (no-op when src == dst).
 func (s *Screen) CopyPage(src, dst int) {
 	copy(s.Pages[dst], s.Pages[src])
 	if dst == 0 {
