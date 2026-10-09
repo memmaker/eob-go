@@ -12,7 +12,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"sync"
-	"time"
 
 	"github.com/felix/goeob/internal/opl"
 )
@@ -192,19 +191,15 @@ func (p *Player) PlayAt(id, dist int) {
 	if id < 0 || id >= len(p.ids) || p.ids[id] == 0 || dist >= 16 {
 		return
 	}
-	// The original busy-waits for the driver to count 3b36 down; bounded
-	// here so a player that is not being read (headless) cannot hang.
-	for i := 0; i < 50; i++ {
-		p.mu.Lock()
-		h := p.hold
-		p.mu.Unlock()
-		if h == 0 {
-			break
-		}
-		time.Sleep(time.Millisecond)
-	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	// The original busy-waits for the driver interrupt to count 3b36 down;
+	// run that tick now instead of sleeping until Ebiten's next buffered
+	// Read (up to 50ms of frozen game and input).
+	if p.hold > 0 {
+		p.tick()
+		p.acc += p.rate
+	}
 	n := int(p.ids[id]) // ds:5e22 (> 0 tested above)
 	p.setHeader(p.lastProg, 3, p.lastLvl)
 	p.setHeader(p.lastProg, 1, p.lastPri)
