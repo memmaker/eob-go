@@ -130,9 +130,13 @@ func TestSwitchColor(t *testing.T) {
 	if err != nil {
 		t.Skip(err)
 	}
-	if err := e.DebugLoadSave(testDir + "/EOBDATA.SAV"); err != nil {
+	if err := e.InitResources(); err != nil {
 		t.Skip(err)
 	}
+	if err := e.loadLevel(2); err != nil { // fixed level, not the live savegame
+		t.Fatal(err)
+	}
+	e.Scr.SetPalette(e.scene.levelPal)
 	e.mapColors()
 	find := func(ok func(w [4]byte) bool) int {
 		for b := range e.Blocks {
