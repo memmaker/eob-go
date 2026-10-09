@@ -108,7 +108,7 @@ var keyMap = map[ebiten.Key]int{
 	ebiten.KeyMinus: eob.KeyMinus, ebiten.KeyEqual: eob.KeyEqual, ebiten.KeyNumpadSubtract: eob.KeyKPSub, ebiten.KeyNumpadAdd: eob.KeyKPAdd,
 	ebiten.KeyF1: eob.KeyF1, ebiten.KeyF2: eob.KeyF2, ebiten.KeyF3: eob.KeyF3, ebiten.KeyF4: eob.KeyF4, ebiten.KeyF5: eob.KeyF5, ebiten.KeyF6: eob.KeyF6,
 	// letter commands, as original key numbers (WASD/QE stay movement)
-	ebiten.KeyC: 48, ebiten.KeyI: 24, ebiten.KeyP: 26, ebiten.KeyU: 23, ebiten.KeyT: 21, ebiten.KeyG: 35, ebiten.KeyM: 52,
+	ebiten.KeyC: 48, ebiten.KeyI: 24, ebiten.KeyP: 26, ebiten.KeyU: 23, ebiten.KeyT: 21, ebiten.KeyG: 35, ebiten.KeyR: 52, ebiten.KeyM: eob.KeyMap,
 	ebiten.KeyDigit1: 2, ebiten.KeyDigit2: 3, ebiten.KeyDigit3: 4, ebiten.KeyDigit4: 5, ebiten.KeyDigit5: 6,
 	ebiten.KeyF: eob.KeyAttack, ebiten.KeyTab: eob.KeyTab, ebiten.KeyComma: 53, ebiten.KeyPeriod: 54,
 }
@@ -119,10 +119,11 @@ var helpText = []string{
 	"W S  Up Dn    forward, back",
 	"A D  Lt Rt    step left, right",
 	"Q E           turn left, right",
-	"F1-F6 select  I inventory  P info",
+	"F1-F6 inventory  I inventory  P info",
 	"C camp  Esc close  1-5 , . spells",
-	"F attack  Space turn mode  Tab map",
-	"Kbd mode: U use T throw G get M wall",
+	"F attack  Space turn mode  Tab minimap",
+	"M or minimap click: map, POI notes",
+	"Kbd mode: U use T throw G get R wall",
 	"Ctrl+F or F7-F10    fullscreen",
 	"Pad: stick cursor, A/B click,",
 	" D-pad move/turn, LB/RB strafe,",

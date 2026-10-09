@@ -2,6 +2,7 @@ package eob
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -45,6 +46,7 @@ func (e *Engine) loadSave(path string, fromMenu bool) error {
 		return fmt.Errorf("%s: unexpected size %d (want %d)", filepath.Base(path), len(b), total)
 	}
 	e.leaveLevel()
+	e.loadMapNotes(path)
 	p := 0
 	for i := 0; i < 6; i++ {
 		e.Chars[i].unmarshal(b[p+i*charSize:])
@@ -132,8 +134,34 @@ func (e *Engine) SaveGame(path string) error {
 	b = append(b, e.Opt80e8, e.Opt80e6, e.OptF43c)
 	b = append(b, e.SaveExtra[:sz[5]]...)
 	err := writeFileAtomic(path, b)
+	if err == nil {
+		err = e.saveMapNotes(path)
+	}
 	e.loadCPSVia3(e.X.Str(0x6b38), 2) // INVENT
 	return err
+}
+
+// mapNotes is the explored map and points of interest (extensions), kept
+// in path+".map" beside the original-format save.
+type mapNotes struct {
+	Seen map[int]*[1024]bool
+	POIs map[int]map[int]string
+}
+
+func (e *Engine) loadMapNotes(path string) {
+	var n mapNotes
+	if b, err := os.ReadFile(path + ".map"); err == nil {
+		json.Unmarshal(b, &n) // a damaged file just starts the map over
+	}
+	e.seen, e.pois = n.Seen, n.POIs
+}
+
+func (e *Engine) saveMapNotes(path string) error {
+	b, err := json.Marshal(mapNotes{e.seen, e.pois})
+	if err != nil {
+		return err
+	}
+	return writeFileAtomic(path+".map", b)
 }
 
 // writeFileAtomic replaces path with b via a synced temp file and rename,

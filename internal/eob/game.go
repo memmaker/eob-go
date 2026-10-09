@@ -33,6 +33,10 @@ func (e *Engine) initHandlers() {
 				return true
 			}
 			e.selectChar(a)
+			if e.btnKey != 0 && e.GuiMode == 0 { // extension: F1-F6 open the inventory
+				e.openInventory(a)
+				return true
+			}
 			return false
 		},
 		cbAddr(0x0acd, 0x08d1): func(int, Event) bool { e.eatFood(int(e.SelectedChar)); return true }, // ports S0acd_08d1
@@ -242,6 +246,11 @@ func (e *Engine) Run(savePath string) (err error) {
 			}
 			if ev.Kind == EvKeyDown && ev.Key == KeyTab { // extension
 				e.MiniMap = !e.MiniMap
+				continue
+			}
+			if e.GuiMode == 0 && (ev.Kind == EvKeyDown && ev.Key == KeyMap || // extension
+				ev.Kind == EvMouseDown && e.MiniMap && ev.X >= miniX-1 && ev.Y >= miniY-1 && ev.X <= miniX+miniW*miniCell && ev.Y <= miniY+miniH*miniCell) {
+				e.bigMap()
 				continue
 			}
 			if ev.Kind == EvKeyDown && ev.Key == KeyAttack && e.GuiMode == 0 { // extension

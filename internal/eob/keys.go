@@ -6,7 +6,8 @@ const (
 	KeyEnter  = 43
 	KeySpace  = 61
 	KeyTab    = 16
-	KeyAttack = 34 // F (extension: front-row attack, alternating)
+	KeyAttack = 34    // F (extension: front-row attack, alternating)
+	KeyMap    = 0x200 // M (extension: full-screen map; the wall click moved to R)
 	KeyBack   = 15
 	KeyMinus  = 12
 	KeyEqual  = 13
