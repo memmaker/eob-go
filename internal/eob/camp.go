@@ -1062,8 +1062,11 @@ func (e *Engine) openCamp() {
 	}
 	e.camp.btns = nil
 	e.setFont(oldFont)
-	e.restoreCampView()
 	e.DrawScene(false)
+	e.setDim(10) // 2363: blit the redrawn 3D view (dim 10) over the camp menu
+	d := e.Scr.Dims[10]
+	e.Scr.CopyRegion(d.X*8, d.Y, d.X*8, d.Y, d.W*8, d.H, scenePage, 0)
+	e.restoreCampView()
 	if reloadInvent { // 2394: INVENT back to page 2
 		e.loadCPSVia3(e.X.Str(dsCampInvent), 2)
 	}
