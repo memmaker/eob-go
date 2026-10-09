@@ -1,6 +1,9 @@
 package eob
 
-import "testing"
+import (
+	"os"
+	"testing"
+)
 
 // S08e6_0309 sign-extends the wall byte before indexing wllWallFlags.
 func TestWallFlagsSigned(t *testing.T) {
@@ -37,5 +40,26 @@ func TestCgClassItemTail(t *testing.T) {
 				filled = true // slot 0, or -1 = first free hand (slot 0 first)
 			}
 		}
+	}
+}
+
+// writeFileAtomic replaces the file (and a symlink's target) and leaves no temp file.
+func TestWriteFileAtomic(t *testing.T) {
+	dir := t.TempDir()
+	real := dir + "/real.SAV"
+	os.WriteFile(real, []byte("old"), 0o644)
+	link := dir + "/EOBDATA.SAV"
+	os.Symlink(real, link)
+	if err := writeFileAtomic(link, []byte("new")); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(real); string(b) != "new" {
+		t.Fatalf("target = %q", b)
+	}
+	if fi, _ := os.Lstat(link); fi.Mode()&os.ModeSymlink == 0 {
+		t.Fatal("symlink replaced")
+	}
+	if ents, _ := os.ReadDir(dir); len(ents) != 2 {
+		t.Fatalf("%d files left", len(ents))
 	}
 }

@@ -131,9 +131,45 @@ func (e *Engine) SaveGame(path string) error {
 	b = append(b, e.LevelsTmp[:sz[3]]...)
 	b = append(b, e.Opt80e8, e.Opt80e6, e.OptF43c)
 	b = append(b, e.SaveExtra[:sz[5]]...)
-	err := os.WriteFile(path, b, 0o644)
+	err := writeFileAtomic(path, b)
 	e.loadCPSVia3(e.X.Str(0x6b38), 2) // INVENT
 	return err
+}
+
+// writeFileAtomic replaces path with b via a synced temp file and rename,
+// so a crash mid-save leaves the old save intact (the original writes in
+// place). A symlinked save is replaced at its target.
+func writeFileAtomic(path string, b []byte) error {
+	if t, err := filepath.EvalSymlinks(path); err == nil {
+		path = t
+	}
+	f, err := os.CreateTemp(filepath.Dir(path), filepath.Base(path)+".tmp*")
+	if err != nil {
+		return err
+	}
+	tmp := f.Name()
+	_, err = f.Write(b)
+	if err == nil {
+		err = f.Sync()
+	}
+	if cerr := f.Close(); err == nil {
+		err = cerr
+	}
+	if err == nil {
+		err = os.Chmod(tmp, 0o644)
+	}
+	if err == nil {
+		err = os.Rename(tmp, path)
+	}
+	if err != nil {
+		os.Remove(tmp)
+		return err
+	}
+	if d, err := os.Open(filepath.Dir(path)); err == nil {
+		d.Sync()
+		d.Close()
+	}
+	return nil
 }
 
 // charTimersToRelative ports O210c_123d: active characters' pending
