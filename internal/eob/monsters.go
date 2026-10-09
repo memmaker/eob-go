@@ -212,7 +212,7 @@ turn:
 	}
 	e.updateBlockIfVisible(old)
 	if !e.noMonsterSound {
-		e.playSoundAt(e.mprop(m, 0x17), int(m.Block))
+		e.playSoundAt(int(int8(e.mprop(m, 0x17))), int(m.Block))
 	}
 	return true
 }
@@ -304,9 +304,7 @@ func (e *Engine) walkMonster(m *Monster, dest int) {
 			si = int(m.Dir) + 1
 		} else if di != 0 {
 			si = int(m.Dir) - 1
-		} else {
-			si = int(m.Dir)
-		}
+		} // di == 0 keeps si = dir*2 (original: 04e5 and si,3)
 		e.moveMonster(m, -1, si&3)
 		return
 	}
@@ -433,7 +431,7 @@ func (e *Engine) monsterAttackParty(m *Monster, blk int) bool {
 		return true
 	}
 	vis := e.blockVisible(int(m.Block))
-	snd := e.mprop(m, 0x16)
+	snd := int(int8(e.mprop(m, 0x16)))
 	if vis {
 		if m.Type == 4 {
 			e.playSoundUpdate(snd)
@@ -669,16 +667,16 @@ func (e *Engine) pickMonsterTarget(c, block int) int {
 // scriptTimersAndRespawn ports S08e6_1410 (called after the timer loop).
 func (e *Engine) updateMonstersPost() {
 	mode := e.ScriptTimersMode
-	due := e.ticks >= e.scriptTimerNext
-	stepDue := int(e.StepCounter) >= int(e.StepsUntilScript)
+	stepDue := e.StepCounter >= int(int16(e.StepsUntilScript))
 	fire := false
 	switch mode {
 	case 1:
-		fire = due
+		fire = e.scriptTimerNext < e.ticks
 	case 2:
 		fire = stepDue
 	case 3:
-		fire = stepDue || due
+		// Original bug (S08e6_1454): mode 3 fires while the timer is NOT yet due.
+		fire = stepDue || e.scriptTimerNext >= e.ticks
 	}
 	if !fire {
 		return
@@ -698,7 +696,7 @@ func (e *Engine) updateMonstersPost() {
 			}
 		}
 	}
-	e.scriptTimerNext = e.ticks + uint32(e.ScriptTimerTicks)
+	e.scriptTimerNext = e.ticks + uint32(int32(int16(e.ScriptTimerTicks)))
 	e.StepCounter = 0
 }
 

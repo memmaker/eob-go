@@ -132,7 +132,19 @@ func (e *Engine) loadLevel(level int) error {
 		e.Blocks[b&0x3ff].Script = le16(inf[bp+3:])
 		bp += 5
 	}
-	return e.loadVcn(vcnName)
+	if err := e.loadVcn(vcnName); err != nil {
+		return err
+	}
+	e.loadCPSVia3(e.X.Str(0x6ace), 2) // INVENT
+	e.playSound(0)
+	return nil
+}
+
+// loadCPSVia3 ports the VGA path of loadCpsOrEga (S082c_051b) with
+// page 3 / copy page: the CPS goes to page 3 and is copied to page dst.
+func (e *Engine) loadCPSVia3(name string, dst int) {
+	e.mustCPS(name, 3)
+	copy(e.Scr.Pages[dst], e.Scr.Pages[3])
 }
 
 // loadMaze ports O210c_09aa.
@@ -142,6 +154,9 @@ func (e *Engine) loadMaze(name string) error {
 	if err != nil {
 		return err
 	}
+	// the 6-byte header is read over block 0: its flags keep header byte 4
+	// (ItemHead's low byte is cleared by loadLevel)
+	e.Blocks[0].Flags = b[4]
 	if e.VisitedLevels&(1<<(e.CurrentLevel-1)) != 0 {
 		e.restoreLevelState(e.CurrentLevel)
 		return nil

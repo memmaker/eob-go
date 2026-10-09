@@ -188,7 +188,7 @@ func (e *Engine) mainMenu() (newGame bool, err error) {
 		}
 		switch r {
 		case 0:
-			if e.LoadOriginalSave(e.savePath) == nil {
+			if e.loadSave(e.savePath, true) == nil { // ds:a998 = 0xff
 				return false, nil
 			}
 			e.clearDim()
@@ -246,6 +246,13 @@ func (e *Engine) frontEnd() error {
 			return err
 		}
 		e.CurrentBlock, e.CurrentDirection = 0x1ea, 0
+	} else { // ports S0acd_0f72 (ds:a998 != 0: game loaded from the menu)
+		if !e.KbdMode {
+			e.setHandItem(e.HandItem)
+		}
+		if err := e.loadLevel(e.CurrentLevel); err != nil {
+			return err
+		}
 	}
 	// ports S0acd_0f72 tail (Run adds DrawPlayfield/DrawScene/setDim(7));
 	// ds:dcaa=1 is not modelled (see kbdCommand).

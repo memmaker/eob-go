@@ -144,7 +144,7 @@ func (e *Engine) stowItem(it int) bool {
 func (e *Engine) clickedHandSlot(c, slot int) {
 	ch := &e.Chars[c]
 	cur := int(ch.Inventory[slot])
-	if e.Items[cur].Flags&0x20 != 0 && cur != 0 {
+	if e.Items[cur].Flags&0x20 != 0 {
 		return
 	}
 	h := e.HandItem

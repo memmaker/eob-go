@@ -25,8 +25,13 @@ func (e *Engine) saveSizes() [6]int {
 	return s
 }
 
-// LoadOriginalSave ports O210c_15b9: loads EOBDATA.SAV.
-func (e *Engine) LoadOriginalSave(path string) error {
+// LoadOriginalSave ports O210c_15b9: loads EOBDATA.SAV (in game,
+// ds:a998 != 0xff).
+func (e *Engine) LoadOriginalSave(path string) error { return e.loadSave(path, false) }
+
+// loadSave ports O210c_15b9; fromMenu is ds:a998 == 0xff (main menu): the
+// level load and hand item are then left to frontEnd (S0acd_0f72).
+func (e *Engine) loadSave(path string, fromMenu bool) error {
 	b, err := os.ReadFile(path)
 	if err != nil {
 		return err
@@ -71,9 +76,16 @@ func (e *Engine) LoadOriginalSave(path string) error {
 	copy(e.SaveExtra[:], b[p:p+sz[5]])
 	e.setFont(e.font6)
 	e.loadPortraits()
+	if fromMenu {
+		return nil
+	}
 	if err := e.loadLevel(e.CurrentLevel); err != nil {
 		return err
 	}
+	e.loadCPSVia3(e.X.Str(0x6b72), 0) // PLAYFLD
+	e.drawCompass()
+	e.loadCPSVia3(e.X.Str(0x6b7a), 2) // INVENT
+	e.DrawPlayfield()
 	if !e.KbdMode {
 		e.setHandItem(e.HandItem)
 	} else if e.HandItem != 0 {
@@ -119,7 +131,9 @@ func (e *Engine) SaveGame(path string) error {
 	b = append(b, e.LevelsTmp[:sz[3]]...)
 	b = append(b, e.Opt80e8, e.Opt80e6, e.OptF43c)
 	b = append(b, e.SaveExtra[:sz[5]]...)
-	return os.WriteFile(path, b, 0o644)
+	err := os.WriteFile(path, b, 0o644)
+	e.loadCPSVia3(e.X.Str(0x6b38), 2) // INVENT
+	return err
 }
 
 // charTimersToRelative ports O210c_123d: active characters' pending

@@ -189,7 +189,8 @@ func (e *Engine) updateBlockIfVisible(block int) { e.sceneUpdate = true }
 func (e *Engine) timerFood(int) {
 	for c := 0; c < 6; c++ {
 		ch := &e.Chars[c]
-		if !e.charStatus(c, 2) || ch.Food == 0 || ch.Flags&1 == 0 || ch.HPCur <= -10 {
+		// original tests wearsRing(c, 2) < 0, which never holds (0/1 result)
+		if ch.Food == 0 || ch.Flags&1 == 0 || ch.HPCur <= -10 {
 			continue
 		}
 		ch.Food--

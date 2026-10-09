@@ -98,21 +98,20 @@ func Open(dir string) (*FS, error) {
 	return fs, nil
 }
 
-// Read returns a file, looking first in loose files then PAKs.
+// Read returns a file, looking first in PAKs then loose files.
 // Read ports S1c0e_00db S1c0e_0400 S1c0e_03bb (open/read/close of the DOS
-// PAK-aware file layer, collapsed to a whole-file read; the original
-// searches PAK entries before loose files).
+// PAK-aware file layer, collapsed to a whole-file read).
 func (f *FS) Read(name string) ([]byte, error) {
 	u := strings.ToUpper(name)
+	if d, ok := f.files[u]; ok {
+		return d, nil // S1c0e_1645: a PAK index hit wins over a loose file
+	}
 	if m, _ := filepath.Glob(filepath.Join(f.Dir, "*")); m != nil {
 		for _, p := range m {
 			if strings.EqualFold(filepath.Base(p), u) {
 				return os.ReadFile(p)
 			}
 		}
-	}
-	if d, ok := f.files[u]; ok {
-		return d, nil
 	}
 	return nil, fmt.Errorf("file not found: %s", name)
 }

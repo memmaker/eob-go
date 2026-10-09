@@ -61,9 +61,8 @@ func (e *Engine) scriptOp(op, pos int) int {
 			blk, side, v := e.rd16(&pos), e.rd8(&pos), byte(e.rd8(&pos))
 			e.Blocks[blk].Walls[side] = v
 		case -19:
-			e.CurrentDirection = e.rd8(&pos)
+			e.CurrentDirection = e.rds8(&pos)
 		}
-		e.sceneUpdate = true
 	case 0xfe: // changeWallType, ports S122e_0a16 (opcode table ds:5a4d)
 		switch e.rds8(&pos) {
 		case -9:
@@ -78,7 +77,6 @@ func (e *Engine) scriptOp(op, pos int) int {
 		case -22:
 			e.toggleDoor(e.rd16(&pos), -1)
 		}
-		e.sceneUpdate = true
 	case 0xfd: // ports S122e_0b23 (opcode table ds:5a4d)
 		e.openDoor(e.rd16(&pos))
 	case 0xfc: // ports S122e_0b56 (opcode table ds:5a4d)
@@ -182,7 +180,7 @@ func (e *Engine) scriptOp(op, pos int) int {
 			e.healChar(c, v)
 		}
 	case 0xf3: // calcAndInflictCharacterDamage, ports S122e_12ce (opcode table ds:5a4d)
-		c, a, b, inc := e.rds8(&pos), e.rd8(&pos), e.rd8(&pos), e.rds8(&pos)
+		c, a, b, inc := e.rds8(&pos), e.rds8(&pos), e.rds8(&pos), e.rds8(&pos)
 		if c == -1 {
 			for i := 0; i < 6; i++ {
 				d := a
@@ -253,12 +251,12 @@ func (e *Engine) scriptOp(op, pos int) int {
 	case 0xe9: // launchObject, ports S122e_0c4d (opcode table ds:5a4d)
 		isSpell := e.LevelINF[pos] == 0xdf
 		pos++
-		obj := e.rd8(&pos)
+		obj := e.rds8(&pos)
 		pos++
 		blk := e.rd16(&pos)
-		dir := e.rd8(&pos)
-		sub := e.rd8(&pos)
-		start := e.u8(0x5a40 + dir*2 + sub)
+		dir := e.rds8(&pos)
+		sub := e.rds8(&pos)
+		start := int(e.X.I8(0x5a40 + dir*2 + sub))
 		if !isSpell {
 			it := e.duplicateItem(obj)
 			if it != 0 && !e.launchItem(-1, it, blk, start, dir, int(e.Items[it].Type)) {
@@ -357,7 +355,7 @@ func (e *Engine) scriptEval(pos int) int {
 			b, a := pop(), pop()
 			push(b2i(a != 0 || b != 0))
 		case 0xf7:
-			push(int(e.Blocks[e.rd16(&pos)].Walls[0]))
+			push(int(int8(e.Blocks[e.rd16(&pos)].Walls[0])))
 		case 0xf5:
 			t := e.rds8(&pos)
 			blk := e.rd16(&pos)
@@ -379,7 +377,7 @@ func (e *Engine) scriptEval(pos int) int {
 		case 0xe0:
 			push(e.script.flags)
 		case 0xe7:
-			h := e.HandItem
+			h := e.heldItem() // S0d1c_02dc
 			sub := e.LevelINF[pos]
 			pos++
 			switch sub {
@@ -391,8 +389,8 @@ func (e *Engine) scriptEval(pos int) int {
 				push(int(e.Items[h].Value))
 			}
 		case 0xe9:
-			side := e.rd8(&pos)
-			push(int(e.Blocks[e.rd16(&pos)].Walls[side]))
+			side := e.rds8(&pos)
+			push(int(int8(e.Blocks[e.rd16(&pos)].Walls[side])))
 		case 0xdd:
 			r := e.rd8(&pos)
 			f := 0
@@ -414,7 +412,7 @@ func (e *Engine) scriptEval(pos int) int {
 			}
 			push(f)
 		case 0xdb:
-			a, b, c := e.rd8(&pos), e.rd8(&pos), e.rds8(&pos)
+			a, b, c := e.rds8(&pos), e.rds8(&pos), e.rds8(&pos)
 			push(e.rollDice(a, b, c))
 		case 0xda:
 			f := 0

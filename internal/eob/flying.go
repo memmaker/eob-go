@@ -36,7 +36,7 @@ func (e *Engine) moveFlyingObject(o *FlyingObject, nb, sp int) bool {
 	fl := e.WllWallFlags[w]
 	if o.Enable == 1 {
 		it := int(o.Item)
-		small := e.T.ItemShapeMap[byte(e.Items[it].Icon)] >= 0xf
+		small := int8(e.T.ItemShapeMap[byte(e.Items[it].Icon)]) >= 0xf
 		if fl&1 != 0 || o.U2 != 0 || (fl&2 != 0 && small) {
 			e.unlinkItem(int(o.CurBlock), 0, it)
 			e.linkItemToBlock(nb, it, sp|4)
@@ -139,7 +139,8 @@ func (e *Engine) endFlyingObject(o *FlyingObject) {
 		e.runBlockScript(int(o.CurBlock), 4)
 		e.playSoundUpdate(0x12)
 	}
-	*o = FlyingObject{}
+	// original clears only these fields (U1, U2, CurPos, Flags, Callback survive)
+	o.Enable, o.Range, o.Direction, o.CurBlock, o.U11, o.ShapeIndex, o.Item = 0, 0, 0, 0, 0, 0, 0
 }
 
 // timerFlyingObjects ports S1414_0285.
@@ -152,9 +153,10 @@ func (e *Engine) timerFlyingObjects(int) {
 		done := o.Range == 0
 		v := e.u8(dsFlyStep + int(o.Direction)*4 + int(o.CurPos&3))
 		cross := v&0x80 != 0
-		sp := v & 3
+		sp := v // original masks with 3 only when crossing
 		nb := int(o.CurBlock)
 		if cross {
+			sp &= 3
 			nb = e.calcNewBlock(int(o.CurBlock), int(o.Direction))
 			o.U2 = 0
 		}

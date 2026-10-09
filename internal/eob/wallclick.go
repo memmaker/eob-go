@@ -17,7 +17,7 @@ func (e *Engine) clickedWall(block, dir int) bool {
 		return false
 	}
 	mask := int(e.Blocks[block].Flags&0xf8)>>3 | 0xe0
-	if e.clickFlags&mask == 0 {
+	if e.clickFlags&mask == 0 || int8(t) < 1 { // 0xff types return early, flags kept
 		return false
 	}
 	var r bool
@@ -167,14 +167,24 @@ func (e *Engine) clickedForceDoor(block, side int) bool {
 	return true
 }
 
-// clickedNiche ports S122e_06d0 (mouse path; the keyboard-mode quiver
-// branch is not ported).
+// clickedNiche ports S122e_06d0.
 func (e *Engine) clickedNiche(block, side int) bool {
 	if !e.decorationHit(int(e.WllShapeMap[e.Blocks[block].Walls[side]])) {
 		return false
 	}
 	b := &e.Blocks[block]
-	if e.HandItem == 0 {
+	if e.KbdMode && e.kbdSlot == 0x10 {
+		it := e.unlinkListItem(&b.ItemHead, 8, -1)
+		if e.Items[it].Type == 0x10 {
+			e.linkItem(&e.Chars[e.InvChar].Inventory[0x10], -2, it, 0)
+			e.drawInvSlot(0x10, true, 0)
+		} else {
+			e.printMessage(e.X.Str(0x5b39))
+			e.linkItemTop(block, it, 8)
+		}
+		return true
+	}
+	if e.heldItem() == 0 {
 		if it := e.unlinkListItem(&b.ItemHead, 8, -1); it != 0 {
 			e.runBlockScript(block, 8)
 			e.setHandItem(it)
@@ -182,11 +192,11 @@ func (e *Engine) clickedNiche(block, side int) bool {
 		}
 		return true
 	}
-	if e.T.ItemShapeMap[byte(e.Items[e.HandItem].Icon)] <= 0xe {
+	if e.T.ItemShapeMap[byte(e.Items[e.heldItem()].Icon)] <= 0xe {
 		e.printMessage(e.X.Str(0x5b59))
 		return true
 	}
-	e.linkItem(&b.ItemHead, block, e.HandItem, 8)
+	e.linkItem(&b.ItemHead, block, e.heldItem(), 8)
 	e.runBlockScript(block, 4)
 	e.setHandItem(0)
 	e.sceneUpdate = true

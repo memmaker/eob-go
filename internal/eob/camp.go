@@ -25,6 +25,8 @@ const (
 	dsSlotsMage      = 0x6394
 	dsCampFmtSpell   = 0x645b // "%-18s %1d"
 	dsCampFmtRemain  = 0x6465 // "%d of %d Remaining.  "
+	dsCampPlayfld    = 0x64ce // "PLAYFLD"
+	dsCampInvent     = 0x64d6 // "INVENT"
 	dsCampFmtPrefs   = 0x648d // 4 x "... are %-3s"
 	dsClassFlags     = 0x1231 // per class: 2 mage, 4 cleric
 	campPage         = 10     // backup of the 3D view while camping
@@ -150,15 +152,16 @@ func (e *Engine) campButton(id int) *Button {
 	return nil
 }
 
-// campPress animates a button press (O2102_1551 pressed, wait, released).
-func (e *Engine) campPress(b *Button) {
+// campPress animates a button press (O2102_1551 pressed, wait 5, released
+// plain, highlighted if hl).
+func (e *Engine) campPress(b *Button, hl bool) {
 	if b == nil {
 		return
 	}
 	e.drawCampButton(b, true, true, true)
 	e.present()
 	e.waitTicks(5)
-	e.drawCampButton(b, false, true, false)
+	e.drawCampButton(b, false, hl, true)
 }
 
 // campInput ports the S16a5_005a poll used by the camp menus: returns
@@ -181,7 +184,7 @@ func (e *Engine) campInput() int {
 			}
 		}
 		return ev.Key
-	case EvMouseUp:
+	case EvMouseDown: // 0x1100 buttons fire on press (S16a5_00bd state 1)
 		e.mouseX, e.mouseY = ev.X, ev.Y
 		for _, b := range e.camp.btns {
 			if ev.X >= b.X && ev.X < b.X+b.W && ev.Y >= b.Y && ev.Y < b.Y+b.H {
@@ -228,37 +231,39 @@ func (e *Engine) campConfirm(i int) bool {
 	for !e.quit {
 		if sel != cur {
 			if sel != -1 {
-				e.drawCampButton(e.campButton(sel+0x21), false, false, false)
+				e.drawCampButton(e.campButton(sel+0x21), false, false, true)
 			}
-			e.drawCampButton(e.campButton(cur+0x21), false, true, false)
+			e.drawCampButton(e.campButton(cur+0x21), false, true, true)
 			sel = cur
 		}
 		k := e.campInput()
+		// jump table at 266c; Esc is not in it. The press animates the
+		// highlighted button, whichever was clicked.
+		yes := false
 		switch k {
 		case 0x2b, 0x3d, 0x61: // enter, space
-			e.campPress(e.campButton(sel + 0x21))
-			e.camp.btns = old
-			return sel == 0
+			yes = sel == 0
+		case 0x8021:
+			yes = true
+		case 0x8022:
 		case 0x5c, 0x66:
 			cur ^= 1
-		case KeyEsc, 0x8022:
-			e.campPress(e.campButton(0x22))
-			e.camp.btns = old
-			return false
-		case 0x8021:
-			e.campPress(e.campButton(0x21))
-			e.camp.btns = old
-			return true
-		case 0:
+			continue
+		default:
 			if !e.KbdMode {
 				mx, my := e.Sys.Mouse()
 				for _, b := range e.camp.btns {
 					if b.Arg&2 != 0 && inRect(mx, my, b.X, b.Y, b.X+b.W, b.Y+b.H) {
 						cur = b.ID - 0x21
+						break
 					}
 				}
 			}
+			continue
 		}
+		e.campPress(e.campButton(sel+0x21), true)
+		e.camp.btns = old
+		return yes
 	}
 	e.camp.btns = old
 	return false
@@ -355,7 +360,7 @@ func (e *Engine) campSelectChar(msg int) int {
 			}
 		case KeyEsc, 0x8012:
 			e.setFont(e.font8)
-			e.campPress(e.campButton(0x12))
+			e.campPress(e.campButton(0x12), false)
 			e.setFont(e.font6)
 			sel = -1
 		case 0x8013, 0x8014, 0x8015, 0x8016, 0x8017, 0x8018:
@@ -541,8 +546,19 @@ func (e *Engine) memorizeApply(c int, cleric bool) {
 	}
 }
 
-// drawMemorizeRow ports O2102_0881.
-func (e *Engine) drawMemorizeRow(id, row int, cleric, hl bool) {
+// drawMemorizeRow ports O2102_0881: id 0 clears the row (unless plain);
+// plain rows are printed without shadow on bg 0.
+func (e *Engine) drawMemorizeRow(id, row int, cleric, plain, hl bool) {
+	if row < 0 {
+		return
+	}
+	y := 0x32 + row*9
+	if id == 0 {
+		if !plain {
+			e.Scr.FillRect(0, 6, y, 0xa8, y+8, e.col.BoxFill)
+		}
+		return
+	}
 	names := dsMageNames
 	if cleric {
 		names = dsClericNames
@@ -551,8 +567,12 @@ func (e *Engine) drawMemorizeRow(id, row int, cleric, hl bool) {
 	if hl {
 		fg = 6
 	}
-	s := fmt.Sprintf("%-18s %1d", e.farStr(names+id*4), e.camp.count[id-1])
-	e.printShadow(s, 8, 0x32+row*9, fg, e.col.BoxFill)
+	s := fmt.Sprintf("%-18s %1d", e.farStr(names+id*4), int8(e.camp.count[id-1]))
+	if plain {
+		e.printText(s, 8, y, fg, 0)
+	} else {
+		e.printShadow(s, 8, y, fg, e.col.BoxFill)
+	}
 }
 
 // memorize ports O2102_097a (memorize / pray for spells menu).
@@ -566,8 +586,10 @@ func (e *Engine) memorize(c int, pray bool) {
 	old := cs.btns
 	cs.btns = nil
 	e.drawCampMenu(4)
-	si, want, hl := -1, 0, 0
-	refresh := true
+	// si level shown, want level asked; hl row asked, drawn row shown.
+	si, want, hl, drawn := -1, 0, 0, -1
+	text, list := true, false
+	row := func(r int) int { return int(cs.lists[si][r+1]) } // r=-1 reads the count byte
 	for running := true; running && !e.quit; {
 		e.highlight(c)
 		if want < 0 {
@@ -581,18 +603,35 @@ func (e *Engine) memorize(c int, pray bool) {
 				e.drawCampButton(e.campButton(si+0x1b), false, false, true)
 			}
 			e.drawCampButton(e.campButton(want+0x1b), false, true, true)
-			si, hl, refresh = want, 0, true
+			hl, drawn, si, text, list = 0, -1, want, true, true
 		}
 		n := int(cs.lists[si][0])
-		if refresh {
-			e.Scr.FillRect(0, 8, 0x32, 0xaf, 0x79, e.col.BoxFill)
-			for r := 0; r < n; r++ {
-				e.drawMemorizeRow(int(cs.lists[si][r+1]), r, cleric, r == hl)
+		if list {
+			list = false
+			for r := 0; r < 8; r++ {
+				e.drawMemorizeRow(row(r), r, cleric, false, false)
 			}
-			e.printShadow(fmt.Sprintf(e.X.Str(dsCampFmtRemain), slots[si]-int(cs.used[si]), slots[si]), 8, 0x26, 9, e.col.BoxFill)
-			refresh = false
+			drawn = -1
 		}
-		prev := hl
+		if text {
+			text = false
+			e.printShadow(fmt.Sprintf(e.X.Str(dsCampFmtRemain), slots[si]-int(int8(cs.used[si])), slots[si]), 8, 0x26, 9, e.col.BoxFill)
+		}
+		if hl < 0 {
+			hl = n - 1
+		}
+		if n <= hl {
+			hl = 0
+		}
+		if hl != drawn {
+			if drawn >= 0 {
+				e.drawMemorizeRow(row(drawn), drawn, cleric, true, false)
+			}
+			if hl >= 0 {
+				e.drawMemorizeRow(row(hl), hl, cleric, true, true)
+			}
+			drawn = hl
+		}
 		k := e.campInput()
 		switch k {
 		case 0x5c:
@@ -611,61 +650,62 @@ func (e *Engine) memorize(c int, pray bool) {
 			}
 		}
 		if k&0x8000 != 0 {
-			e.campPress(e.campButton(k))
-		}
-		var id int
-		if prev >= 0 && prev < n { // acts on the row highlighted before this input
-			id = int(cs.lists[si][prev+1])
+			e.campPress(e.campButton(k), false)
 		}
 		switch k {
 		case 0xc, 0x42, 0x69: // remove one
-			if slots[si] != 0 && id > 0 && cs.count[id-1] != 0 {
-				cs.count[id-1]--
+			id := row(drawn)
+			// drawn -1 (empty level) reads id 0: count[-1] is used[3] in the original
+			cnt := &cs.used[3]
+			if id > 0 {
+				cnt = &cs.count[id-1]
+			}
+			if slots[si] != 0 && *cnt != 0 {
+				*cnt--
 				cs.used[si]--
-				refresh = true
+				e.drawMemorizeRow(row(drawn), drawn, cleric, false, true)
+				text = true
 			}
 		case 0xd, 0x2b, 0x3d, 0x61, 0x6a, 0x8020: // add one
-			if slots[si]-int(cs.used[si]) > 0 && id > 0 {
-				cs.count[id-1]++
+			if slots[si]-int(int8(cs.used[si])) > 0 && drawn > -1 {
+				cs.count[row(drawn)-1]++
 				cs.used[si]++
-				refresh = true
+				e.drawMemorizeRow(row(drawn), drawn, cleric, false, true)
+				text = true
 			}
 		case 0x8019: // clear
-			for r := 1; r <= n; r++ {
-				s := cs.lists[si][r] - 1
-				cs.used[si] -= cs.count[s]
-				cs.count[s] = 0
+			if cs.used[si] != 0 {
+				for r := 0; r < n; r++ {
+					s := row(r) - 1
+					cs.used[si] -= cs.count[s]
+					cs.count[s] = 0
+				}
+				text, list = true, true
 			}
-			refresh = true
 		case 0x801a:
 			for i := range e.Chars { // S0d1c_0583
 				e.drawCharPanel(i)
 			}
 			running = false
 		case 0x801b, 0x801c, 0x801d, 0x801e, 0x801f:
-			want = k - 0x801b
+			if want = k - 0x801b; want == si {
+				e.drawCampButton(e.campButton(k), false, true, true)
+			}
 		case 0x5b:
 			hl = 0
 		case 0x5d:
 			hl = n - 1
 		case 0x60:
-			hl = prev - 1
+			hl = drawn - 1
 		case 0x62:
-			hl = prev + 1
-		}
-		if hl < 0 {
-			hl = n - 1
-		}
-		if hl >= n {
-			hl = 0
-		}
-		if hl != prev {
-			refresh = true
+			hl = drawn + 1
 		}
 	}
 	cs.btns = old
 	e.highlight(-1)
+	e.setFont(e.font6)
 	e.drawCharPanel(c)
+	e.setFont(e.font8)
 	e.memorizeApply(c, cleric)
 }
 
@@ -748,7 +788,7 @@ func (e *Engine) scribeScrolls() {
 		case 0x62:
 			di = (di + 1) % len(list)
 		case 0x8024:
-			if v := (my - 0x32) / 9; v >= 0 && v < len(list) {
+			if v := (e.mouseY - 0x32) / 9; v >= 0 && v < len(list) { // click y ds:8142
 				di = v
 			} else {
 				break
@@ -832,7 +872,7 @@ func (e *Engine) openCamp() {
 	e.saveCampView()
 	oldFont := e.setFont(e.font8)
 	e.camp.redraw = false
-	redrawChars := false
+	redrawChars, reloadInvent := false, false
 	prev, di := -1, 0
 	hl, want := 0, 0
 	for running := true; running && !e.quit; {
@@ -859,11 +899,11 @@ func (e *Engine) openCamp() {
 		if (k == 0x2b || k == 0x3d || k == 0x61) && hl != 0 {
 			k = 0x8000 | hl
 		}
-		if k&0x7fff != 0 && e.campButton(k) != nil && k&0x8000 != 0 {
-			b := e.campButton(k)
-			e.drawCampButton(e.campButton(hl), false, false, false)
-			e.campPress(b)
-			hl, want = b.ID, b.ID
+		// any code naming a button animates it, even a raw key (1d55)
+		if b := e.campButton(k); k&0x7fff != 0 && b != nil {
+			e.drawCampButton(e.campButton(hl), false, false, true)
+			e.campPress(b, true)
+			hl, want = 0, b.ID
 		}
 		first, last := e.campMenu(prev, 2)+1, e.campMenu(prev, 2)+e.campMenu(prev, 3)
 		switch k {
@@ -881,7 +921,13 @@ func (e *Engine) openCamp() {
 				e.campMessage(0x2d)
 			} else {
 				e.dropChar(e.campSelectChar(0x35))
+				e.loadCPSVia3(e.X.Str(dsCampPlayfld), 0)
+				reloadInvent = true
+				e.loadCPSVia3(e.X.Str(dsCampInvent), 2)
+				e.saveCampView()
+				e.setFont(e.font6)
 				e.DrawPlayfield()
+				e.setFont(e.font8)
 			}
 			di = 0
 		case 0x8001:
@@ -917,11 +963,16 @@ func (e *Engine) openCamp() {
 				di = 1
 				break
 			}
+			reloadInvent = true
 			e.restoreCampView()
 			e.setFont(e.font6)
+			e.DrawScene(true)
 			if err := e.LoadOriginalSave(e.savePath); err != nil {
 				e.setFont(e.font8)
 				e.saveCampView()
+				e.camp.btns = nil
+				e.drawCampMenu(1)
+				want = e.campMenu(1, 2) + 1
 				e.campMessage(0x10)
 				di = 1
 				break
@@ -992,24 +1043,27 @@ func (e *Engine) openCamp() {
 			}
 		}
 		if e.camp.redraw || redrawChars {
+			e.setFont(e.font6)
 			for c := 0; c < 6; c++ {
+				e.drawCharPanel(c)
 				e.sortSpells(c)
 			}
-			e.setFont(e.font6)
-			e.DrawPlayfield()
 			e.setFont(e.font8)
 			e.camp.redraw, redrawChars = false, false
 		}
 		if hl != want && di == -1 && running {
-			e.drawCampButton(e.campButton(hl), false, false, false)
-			e.drawCampButton(e.campButton(want), false, true, false)
+			e.drawCampButton(e.campButton(hl), false, false, true)
+			e.drawCampButton(e.campButton(want), false, true, true)
 			hl = want
 		}
 	}
 	e.camp.btns = nil
-	e.restoreCampView()
 	e.setFont(oldFont)
+	e.restoreCampView()
 	e.DrawScene(false)
+	if reloadInvent { // 2394: INVENT back to page 2
+		e.loadCPSVia3(e.X.Str(dsCampInvent), 2)
+	}
 	e.present()
 }
 

@@ -96,7 +96,9 @@ func DecodeCPS(b []byte) (*CPS, error) {
 	}
 	switch comp {
 	case 0:
-		c.Data = append([]byte(nil), b[p:p+size]...)
+		// S1b82_00c7 type 0 copies from header+8 (file offset 10) and does
+		// not skip a palette, unlike type 4.
+		c.Data = append([]byte(nil), b[10:min(10+size, len(b))]...)
 	case 4:
 		c.Data = LCW(b[p:], size)
 	default:

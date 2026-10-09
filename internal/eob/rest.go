@@ -43,9 +43,12 @@ func (e *Engine) restParty() bool {
 			}
 		}
 	}
+	oldDim := e.txtDim
+	e.setDimClear(7)
 	injured := e.mostInjured()
 	step := 0
 	e.restShowHours(hours, true)
+	e.setDim(7)
 	e.setFont(e.font6)
 	monsters := false
 	for !e.quit {
@@ -108,6 +111,9 @@ func (e *Engine) restParty() bool {
 			break
 		}
 	}
+	// original: S1aad_0480, setDim(4); O2102's camp loop later restores the
+	// dim, which Go's camp does not track, so restore it here.
+	e.setDim(oldDim)
 	e.setFont(e.font8)
 	if injured == 0 && !monsters {
 		e.campMessage(0x2b)
@@ -248,7 +254,10 @@ func (e *Engine) restMonstersNear() bool {
 	e.noMonsterSound = false
 	for i := range e.Monsters {
 		if blockDistance(e.CurrentBlock, int(e.Monsters[i].Block)) < 2 {
+			old := e.txtDim
+			e.setDim(7)
 			e.printMessage(e.X.Str(dsRestMonsters))
+			e.setDim(old)
 			return true
 		}
 	}

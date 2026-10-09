@@ -520,7 +520,8 @@ func (e *Engine) areaDamageFront(block, times, pips, mod, save int) {
 func (e *Engine) areaDamageMonster(mi, times, pips, mod, save int) {
 	m := &e.Monsters[mi]
 	d := e.rollDice(times, pips, mod)
-	if save != 0 && e.rollDice(1, 20, 0) >= e.savingThrowValue(0, e.mprop(m, 2), 4) {
+	// Hit dice byte is signed (0xff = under 1 HD -> level -1).
+	if save != 0 && e.rollDice(1, 20, 0) >= e.savingThrowValue(0, int(int8(e.mprop(m, 2))), 4) {
 		if save == 1 {
 			d >>= 1
 		} else {
@@ -964,7 +965,7 @@ func (e *Engine) recalcArmorClass(c int) {
 		}
 		ac -= v1
 	}
-	if ch.EffectsRemainder[0] > 0 {
+	if int8(ch.EffectsRemainder[0]) > 0 {
 		if ac > dex+6 {
 			ac = dex + 6
 		} else {

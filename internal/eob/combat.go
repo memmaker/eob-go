@@ -179,10 +179,7 @@ func (e *Engine) meleeAttack(c, item int) int {
 	if !e.rollToHit(c, mon, item, true) {
 		return -1
 	}
-	typ := 0
-	if item != 0 {
-		typ = int(e.Items[item].Type)
-	}
+	typ := int(e.Items[item].Type) // original reads Items[0] for bare hands too
 	if typ > 0x33 && typ < 0x39 && e.monsterMagicResist(mon) {
 		return -1
 	}
@@ -298,7 +295,7 @@ func (e *Engine) fireMissile(c, launcher int) int {
 	} else {
 		for s := 0; s < 27; s++ {
 			it := int(ch.Inventory[s])
-			if it != 0 && int(e.Items[it].Type) == ammo {
+			if int(e.Items[it].Type) == ammo { // original: no empty-slot check (Items[0])
 				si = it
 				ch.Inventory[s] = 0
 				if s < 2 {
@@ -482,7 +479,7 @@ func (e *Engine) savingThrowValue(group, level, typ int) int {
 		level = mx
 	}
 	idx := level/e.u8(dsSaveLvlDiv+group) + e.u8(dsSaveTypeMul+group)*typ
-	return int(e.X.U8(off + idx))
+	return int(e.X.I8(off + idx))
 }
 
 // savingThrow ports S0d1c_059b. Returns true if the save succeeded.
@@ -514,7 +511,7 @@ func (e *Engine) savingThrowEffect(c, bit int, name string, saveType, dur, ev, u
 		return
 	}
 	ch.Flags |= byte(bit)
-	e.setCharEventTimer(c, dur*0x222, ev, true) // original always passes unique=1
+	e.setCharEventTimer(c, int(int16(dur*0x222)), ev, true) // 16-bit imul; original always passes unique=1
 	e.printMessage(sprintfC(e.X.Str(dsStrIsEffect), ch.NameStr(), name))
 }
 
@@ -574,7 +571,12 @@ func (e *Engine) setCharEventTimer(c, ticks, ev int, unique bool) {
 	if di >= 0 {
 		ch.Timers[di] = due
 		ch.Events[di] = int8(ev)
+		return
 	}
+	// Original bug: no slot -> writes Timers[-1] (= Inventory[25..26], the
+	// ring slots) and Events[-1] (= top byte of Timers[9]).
+	ch.Inventory[25], ch.Inventory[26] = uint16(due), uint16(due>>16)
+	ch.Timers[9] = ch.Timers[9]&0x00ffffff | uint32(byte(ev))<<24
 }
 
 // clearCharEvent ports S1414_0c2d.

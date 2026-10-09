@@ -112,7 +112,7 @@ func (e *Engine) cgInput(btns []Button) int {
 			}
 		}
 		return ev.Key
-	case EvMouseUp:
+	case EvMouseDown: // 0x1100 buttons fire on press (S16a5_00bd state 1)
 		e.mouseX, e.mouseY = ev.X, ev.Y
 		for _, b := range btns {
 			if ev.X >= b.X && ev.X < b.X+b.W && ev.Y >= b.Y && ev.Y < b.Y+b.H {

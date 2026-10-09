@@ -184,6 +184,9 @@ func (e *Engine) Run(savePath string) (err error) {
 	e.loadTimers()
 	e.initTimerHandlers()
 	e.seed = 1
+	// S07a9_000a sets ds:f43c = 1 (bar graphs); ds:80e8 is 1 in the DS
+	// image; S07c8_0037 sets ds:80e6 = (sound driver arg != '4'): on.
+	e.Opt80e8, e.Opt80e6, e.OptF43c, e.BarGraphs = 1, 1, 1, true
 	e.savePath = savePath
 	if savePath == "" {
 		if err := e.frontEnd(); err != nil {

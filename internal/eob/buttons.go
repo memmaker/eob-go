@@ -60,8 +60,13 @@ func (e *Engine) buttonList(ds, n int) []int {
 
 // processButtons ports the matching rules of the original GUI processor
 // (ports S16a5_00bd; its pre-callback hook ds:fc7c is only ever set to NULL,
-// by S16a5_0d78 at startup, so it is omitted: ports S16a5_0d78): keys match key/key2; mouse buttons trigger on press or
-// release depending on button flags (0x800/0x100 left, 0x8000/0x1000 right).
+// by S16a5_0d78 at startup, so it is omitted: ports S16a5_0d78): keys match
+// key/key2 exactly (word compare; shifted 0x1xx codes only match with shift,
+// which the host never sends). Mouse: left press 0x100, held 0x200, release
+// 0x400, up 0x800; right 0x1000/0x2000/0x4000/0x8000. Every static and
+// runtime-built (O20f6_03b2, O2102_123c) button uses 0x1100 or 0x1000, so
+// only the press triggers occur; their 0x2e toggle redraw (S16a5_07c3) has
+// draw type 0 and shows nothing, and none sets hover 4 / drag 0x40.
 // A callback returning false lets processing continue with the next button.
 func (e *Engine) processButtons(ev Event, list []int) bool {
 	for _, k := range list {
@@ -70,7 +75,7 @@ func (e *Engine) processButtons(ev Event, list []int) bool {
 		switch ev.Kind {
 		case EvKeyDown:
 			key := ev.Key
-			hit = key != 0 && ((b.Key&0xff) == key || (b.Key2 != 0 && (b.Key2&0xff) == key))
+			hit = key != 0 && (b.Key == key || b.Key2 == key)
 		case EvMouseDown, EvMouseUp:
 			if b.W <= 0 || b.H <= 0 || ev.X < b.X || ev.X >= b.X+b.W || ev.Y < b.Y || ev.Y >= b.Y+b.H {
 				continue
@@ -78,13 +83,13 @@ func (e *Engine) processButtons(ev Event, list []int) bool {
 			var mask int
 			switch {
 			case ev.Kind == EvMouseDown && ev.Button == 1:
-				mask = 0x800
-			case ev.Kind == EvMouseUp && ev.Button == 1:
 				mask = 0x100
+			case ev.Kind == EvMouseUp && ev.Button == 1:
+				mask = 0x400
 			case ev.Kind == EvMouseDown && ev.Button == 2:
-				mask = 0x8000
-			case ev.Kind == EvMouseUp && ev.Button == 2:
 				mask = 0x1000
+			case ev.Kind == EvMouseUp && ev.Button == 2:
+				mask = 0x4000
 			}
 			hit = b.Flags&mask != 0
 		}
