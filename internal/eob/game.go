@@ -244,6 +244,10 @@ func (e *Engine) Run(savePath string) (err error) {
 			if ev.Kind == EvMouseDown || ev.Kind == EvMouseUp {
 				e.mouseX, e.mouseY = ev.X, ev.Y
 			}
+			if e.autoPath != nil && (ev.Kind == EvKeyDown || ev.Kind == EvMouseDown) { // any input stops an auto-walk
+				e.autoPath = nil
+				continue
+			}
 			if ev.Kind == EvKeyDown && ev.Key == KeyTab { // extension
 				e.MiniMap = !e.MiniMap
 				continue
@@ -278,6 +282,11 @@ func (e *Engine) Run(savePath string) (err error) {
 				e.turnLeft--
 			}
 			e.processTimers()
+		}
+		if len(e.autoPath) > 0 {
+			e.autoWalk()
+		} else {
+			e.autoPath = nil
 		}
 		if e.sceneUpdate { // S0acd_0e8a order: timers, scene, ambient, sound, turn undead
 			e.DrawScene(true)

@@ -158,6 +158,8 @@ type Engine struct {
 	tickOfs                uint32   // game time skipped by resting
 	menuItems              []string // menuCustom items
 	MiniMap                bool     // Tab: minimap overlay (extension)
+	autoPath               []int    // map auto-walk directions still to go (bigmap.go)
+	autoNext               uint32   // Millis of the next auto-walk step
 	padX, padY             int      // cursor at the last gamepad press (pad.go)
 	padNav                 bool     // D-pad drives the menu highlight
 	padClick               [3]bool  // A/B pressed as a click: release as one

@@ -88,3 +88,37 @@ func TestEatFromSlot(t *testing.T) {
 		t.Fatalf("slot %d food %d", ch.Inventory[2], ch.Food)
 	}
 }
+
+// A map click walks the party to a seen block.
+func TestAutoWalk(t *testing.T) {
+	e, err := New(testDir, &fakeSys{})
+	if err != nil {
+		t.Skip(err)
+	}
+	if err := e.DebugLoadSave(testDir + "/EOBDATA.SAV"); err != nil {
+		t.Skip(err)
+	}
+	e.seen = map[int]*[1024]bool{e.CurrentLevel: new([1024]bool)}
+	// explore a few blocks reachable from the start, remember the farthest
+	dst, q := e.CurrentBlock, []int{e.CurrentBlock}
+	e.seen[e.CurrentLevel][dst] = true
+	for i := 0; i < 6 && len(q) > 0; i++ {
+		for d := 0; d < 4; d++ {
+			if nb := e.checkMove(q[0], d); nb >= 0 && !e.seen[e.CurrentLevel][nb] {
+				e.seen[e.CurrentLevel][nb] = true
+				q, dst = append(q, nb), nb
+			}
+		}
+		q = q[1:]
+	}
+	if e.autoPath = e.findPath(dst); e.autoPath == nil {
+		t.Fatal("no path")
+	}
+	for i := 0; i < 50 && len(e.autoPath) > 0; i++ {
+		e.autoNext = 0
+		e.autoWalk()
+	}
+	if e.CurrentBlock != dst {
+		t.Fatalf("at %d, want %d", e.CurrentBlock, dst)
+	}
+}
