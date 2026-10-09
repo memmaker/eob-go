@@ -9,6 +9,7 @@ type guiColors struct {
 	BoxFill, BoxHi, BoxLo, Hi2, HPLow, Text, Misc1, Misc2, BtnFill, BtnHi, BtnLo byte
 }
 
+// initGuiColors ports O2106_0937 (VGA branch; the EGA branch is nonvga).
 func (e *Engine) initGuiColors() {
 	from := e.X.OverlayBase(0x2106) + 0x0948
 	to := e.X.OverlayBase(0x2106) + 0x0981
@@ -80,6 +81,7 @@ func (e *Engine) printText(s string, x, y int, fg, bg byte) {
 	e.Scr.PrintText(e.font, e.drawPage, s, x, y, fg, bg)
 }
 
+// drawCharPanel ports S082c_0974 S082c_09a6 (digit-count*3 width, inlined).
 // drawCharPanel ports S1547_0991 (playfield mode).
 func (e *Engine) drawCharPanel(c int) {
 	if c < 0 || !e.charStatus(c, 1) { // campSelectChar passes -1 (no keyboard selection yet)
@@ -366,6 +368,7 @@ func (e *Engine) canUseHand(c, hand int) bool {
 }
 
 // DrawPlayfield draws the party panel for all characters.
+// DrawPlayfield ports S0d1c_0583: redraws the six character panels.
 func (e *Engine) DrawPlayfield() {
 	for c := 0; c < 6; c++ {
 		e.drawCharPanel(c)

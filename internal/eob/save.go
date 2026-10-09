@@ -44,6 +44,7 @@ func (e *Engine) LoadOriginalSave(path string) error {
 	for i := 0; i < 6; i++ {
 		e.Chars[i].unmarshal(b[p+i*charSize:])
 	}
+	e.charTimersToAbsolute()
 	p += sz[0]
 	copy(e.Vars.Raw[:], b[p:p+sz[1]])
 	e.CurrentLevel = int(binary.LittleEndian.Uint16(e.Vars.Raw[0:]))
@@ -89,9 +90,11 @@ func (e *Engine) SaveGame(path string) error {
 	sz := e.saveSizes()
 	var b []byte
 	ch := make([]byte, sz[0])
+	e.charTimersToRelative()
 	for i := range e.Chars {
 		e.Chars[i].marshal(ch[i*charSize:])
 	}
+	e.charTimersToAbsolute()
 	b = append(b, ch...)
 	v := e.Vars.Raw
 	binary.LittleEndian.PutUint16(v[0:], uint16(e.CurrentLevel))
@@ -117,6 +120,41 @@ func (e *Engine) SaveGame(path string) error {
 	b = append(b, e.Opt80e8, e.Opt80e6, e.OptF43c)
 	b = append(b, e.SaveExtra[:sz[5]]...)
 	return os.WriteFile(path, b, 0o644)
+}
+
+// charTimersToRelative ports O210c_123d: active characters' pending
+// timers become ticks-from-now (an already due timer becomes 1).
+func (e *Engine) charTimersToRelative() {
+	for c := 0; c < 6; c++ {
+		if !e.charStatus(c, 1) {
+			continue
+		}
+		t := &e.Chars[c].Timers
+		for i := range t {
+			if t[i] > e.ticks {
+				t[i] -= e.ticks
+			} else if t[i] != 0 {
+				t[i] = 1
+			}
+		}
+	}
+}
+
+// charTimersToAbsolute ports O210c_12f1: the inverse of
+// charTimersToRelative, then S1414_0b2e re-arms the timers.
+func (e *Engine) charTimersToAbsolute() {
+	for c := 0; c < 6; c++ {
+		if !e.charStatus(c, 1) {
+			continue
+		}
+		t := &e.Chars[c].Timers
+		for i := range t {
+			if t[i] != 0 {
+				t[i] += e.ticks
+			}
+		}
+	}
+	e.rebuildCharTimers()
 }
 
 // loadPortraits ports the face loading part of O210c_15b9.

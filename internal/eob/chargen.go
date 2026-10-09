@@ -81,7 +81,8 @@ func (e *Engine) cgInit() {
 	e.drawPage = 0
 }
 
-// cgButtons ports O20f6_042f: builds n buttons from template first.
+// cgButtons ports O20f6_042f: builds n buttons from template first; the
+// per-button init (pool slot, id, keys, x*8/y/w/h, flags 0x1100) ports O20f6_03b2.
 func (e *Engine) cgButtons(first, n int) []Button {
 	r := make([]Button, n)
 	for i := range r {
@@ -338,7 +339,7 @@ func (e *Engine) cgRollStats(c int) {
 	ch.DexCur, ch.DexMax = int8(v[3]), int8(v[3])
 	ch.ConCur, ch.ConMax = int8(v[4]), int8(v[4])
 	ch.ChaCur, ch.ChaMax = int8(v[5]), int8(v[5])
-	ch.AC = int8(e.i16(dsDexAC+int(int8(v[3]))*2) + 10)
+	ch.AC = int8(e.i16(dsDexAC+int(int8(v[3]))*2) + 10) // ports S0a72_019d inline (dex AC table)
 	hp := int8(e.hpGain(cls, int(ch.ConCur), int(ch.Level[0]), int(ch.Level[1]), int(ch.Level[2])))
 	ch.HPCur, ch.HPMax = hp, hp
 }
@@ -1012,7 +1013,8 @@ func (e *Engine) chargen() {
 	e.cgFinish()
 }
 
-// cgFinish is the tail of O20f6_28f9: starting items, mage spells, maxima.
+// cgFinish is the tail of O20f6_28f9: starting items, mage spells, maxima;
+// the loops port O20f6_280d and O20f6_284a.
 func (e *Engine) cgFinish() {
 	e.cgGiveItems()
 	for c := 0; c < 4; c++ { // O20f6_280d

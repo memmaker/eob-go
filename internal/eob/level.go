@@ -21,6 +21,7 @@ func cstr(b []byte) string {
 func le16(b []byte) uint16 { return binary.LittleEndian.Uint16(b) }
 
 // loadLevel ports O210c_0a7c.
+// loadLevel ports S082c_0ae8 ("%s%d.%s" filename sprintf, inlined).
 func (e *Engine) loadLevel(level int) error {
 	e.CurrentLevel = level
 	raw, err := e.FS.Read(fmt.Sprintf("LEVEL%d.INF", level))
@@ -51,7 +52,7 @@ func (e *Engine) loadLevel(level int) error {
 	p += 0x18
 
 	e.freeDoorShapes()
-	for i := 0; i < 36; i++ {
+	for i := 0; i < 36; i++ { // ports O210c_05d2(0, 0x24)
 		e.MonsterShapes[i] = nil
 	}
 	e.freeDecorations()
@@ -151,6 +152,9 @@ func (e *Engine) loadMaze(name string) error {
 	return nil
 }
 
+// loadVcn ports O210c_07a5 (VGA "%s.VCN"; the mode 2/0 branches are
+// nonvga). A NULL name in the original reloads the last VCN after a
+// sequence clobbered the shared buffer; e.vcn is never clobbered here.
 func (e *Engine) loadVcn(name string) error {
 	b, err := e.FS.Read(name + ".VCN")
 	if err != nil {
@@ -164,6 +168,7 @@ func (e *Engine) loadVcn(name string) error {
 	return nil
 }
 
+// freeDoorShapes ports O210c_031a (frees door shapes and switch shapes).
 func (e *Engine) freeDoorShapes() {
 	for i := range e.DoorShapes {
 		e.DoorShapes[i] = nil
@@ -171,6 +176,7 @@ func (e *Engine) freeDoorShapes() {
 	}
 }
 
+// freeDecorations ports O210c_0000 (frees decoration shapes, resets count).
 func (e *Engine) freeDecorations() {
 	for i := range e.DecoShapes {
 		e.DecoShapes[i] = nil
@@ -202,7 +208,8 @@ func (e *Engine) loadDoorShapes(type1, shp1, type2, shp2 int) {
 	}
 }
 
-// loadMonsterShapes ports the three loaders O210c_0624/069e/0718.
+// loadMonsterShapes ports the three loaders O210c_0624, O210c_069e, O210c_0718
+// (called through the far-pointer table ds:6a80).
 func (e *Engine) loadMonsterShapes(name string, enc, base int) {
 	name = strings.ToUpper(name)
 	tab := []int{dsMonEnc0, dsMonEnc1, dsMonEnc2}[enc]

@@ -113,6 +113,7 @@ func (e *Engine) spellbookTab(level int) {
 }
 
 // spellbookRow ports S0ef3_2929.
+// spellbookRow ports S082c_0ab4 (clamp/wrap helper, inlined).
 func (e *Engine) spellbookRow(row int, ev Event) {
 	sb := &e.book
 	if row == 6 {
@@ -201,8 +202,8 @@ func (e *Engine) castSpell(sp, itemSlot int) {
 	}
 	e.printMessage(sprintfC(e.X.Str(dsStrCasts), ch.NameStr(), s.Name))
 	if s.Flags&1 != 0 {
+		// target prompt ports S0ef3_059d (its S0cf7_0211 button list = sb.waiting)
 		e.printMessageNow(e.X.Str(dsStrWhichChar))
-		e.playSound(0x4f)
 		sb.waiting = true
 		return
 	}
@@ -229,6 +230,7 @@ func (e *Engine) castSpell(sp, itemSlot int) {
 	}
 }
 
+// isMagicItem ports S0ef3_121b.
 func isMagicItem(it int) bool { return it >= 0xb && it <= 0x11 }
 
 // spellTargetClicked ports S0ef3_08cf.

@@ -60,7 +60,7 @@ func (e *Engine) menuStr(strs, idx int) string {
 	return e.farStr(strs + idx*4)
 }
 
-func inBox(x, y, x1, y1, x2, y2 int) bool { return x >= x1 && x <= x2 && y >= y1 && y <= y2 } // S14ef_00e1
+func inBox(x, y, x1, y1, x2, y2 int) bool { return x >= x1 && x <= x2 && y >= y1 && y <= y2 } // ports S14ef_00e1
 
 // menuOrigin returns the screen position of row 0 and the row height.
 func (e *Engine) menuOrigin(m int) (x, y, rowH int) {
@@ -224,7 +224,10 @@ func (e *Engine) waitInput() {
 	}
 }
 
-// frontEnd runs the main menu (O2106_09cc) and starts the game (S0acd_0f72).
+// frontEnd ports O2106_09cc (init via InitResources, then the main menu).
+// It then starts the game as S0acd_0f72 does. That routine also calls
+// O2116_2039, whose body is empty (push si / xor si,si / inc si / pop si);
+// this ports O2116_2039 as nothing.
 func (e *Engine) frontEnd() error {
 	e.savePath = filepath.Join(e.dir, "EOBDATA.SAV")
 	pal := e.Scr.Pal // INTRO.EXE is a separate process: EOB.EXE keeps its own palette
@@ -238,12 +241,16 @@ func (e *Engine) frontEnd() error {
 		return err
 	}
 	e.setFont(e.font6) // S07a9_00f1
-	if newGame {       // S0acd_1033
+	if newGame {       // ports S0acd_1033 (level 1, block 0x1ea, north)
 		if err := e.loadLevel(1); err != nil {
 			return err
 		}
 		e.CurrentBlock, e.CurrentDirection = 0x1ea, 0
 	}
+	// ports S0acd_0f72 tail (Run adds DrawPlayfield/DrawScene/setDim(7));
+	// ds:dcaa=1 is not modelled (see kbdCommand).
+	e.SpellbookOpen = false // ds:f3b9
+	e.SelectedChar = 0      // ds:a99a
 	e.loadPlayfield()
 	return nil
 }

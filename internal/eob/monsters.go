@@ -544,7 +544,7 @@ func (e *Engine) updateMonsters(unit int) {
 			e.monsterWalkTurn(m, int(e.X.I8(dsMonModeTurnA+int(m.Mode))))
 		case 5, 6:
 			e.monsterFollowWall(m, int(e.X.I8(dsMonModeTurnB+int(m.Mode))))
-		case 7, 10:
+		case 7, 10: // ports S08e6_0ca6 (spell status countdown)
 			if m.SpellStatusLeft != 0 {
 				m.SpellStatusLeft--
 				if m.SpellStatusLeft == 0 {
@@ -758,7 +758,7 @@ func (e *Engine) monsterRangedAttack(m *Monster) bool {
 			return false
 		}
 	}
-	missile := func(sp int) { e.launchSpellObject(-1, sp, mb, int(m.Pos), d) }
+	missile := func(sp int) { e.launchSpellObject(-1, sp, mb, int(m.Pos), d) } // ports S08e6_073f
 	switch m.Type {
 	case 4:
 		missile(9)

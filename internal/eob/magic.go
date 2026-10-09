@@ -1,5 +1,7 @@
 package eob
 
+import "github.com/felix/goeob/internal/gfx"
+
 // Magic system: spell table, casting, spell effects and missiles
 // (port of segment S0ef3 and helpers). All values come from EOB.EXE.
 
@@ -63,6 +65,10 @@ func (e *Engine) loadSpells() {
 		s.Flags2 = x.U8(o + 0x12)
 	}
 	sp := func(off int) uint32 { return cbAddr(0x0ef3, off) }
+	// Inline per-spell callbacks (ds:1344 table): castMissile ports S0ef3_10d2 S0ef3_12c2
+	// (also ports) S0ef3_13fd S0ef3_144a S0ef3_150f S0ef3_1609 S0ef3_17b7 S0ef3_1a0f S0ef3_2011;
+	// empty casts ports S0ef3_1315 S0ef3_18d3 S0ef3_1fc8 S0ef3_1fcd; healChar casts ports
+	// (also ports) S0ef3_1b20 S0ef3_1ecc S0ef3_1fd2; touchAttack casts ports S0ef3_1b43 S0ef3_1ef3 S0ef3_1ff9.
 	e.spellCast = map[uint32]func(){
 		sp(0x0f0b): e.spArmor, sp(0x0f99): e.spBurningHands, sp(0x1069): e.spDetectMagic,
 		sp(0x10d2): func() { e.castMissile(0) }, sp(0x1122): e.spShield, sp(0x1197): e.spShockingGrasp,
@@ -78,11 +84,13 @@ func (e *Engine) loadSpells() {
 		sp(0x1ddf): e.spVestment, sp(0x1e3e): e.spPrayer, sp(0x1e7e): e.spRemoveParalysis,
 		sp(0x1ecc): func() { e.healChar(int(e.spellTarget), e.rollDice(2, 8, 1)) },
 		sp(0x1ef3): func() { e.touchAttack(2, 8, 1) }, sp(0x1f0b): e.spNeutralizePoison,
-		sp(0x1f33): e.spProtEvil10, sp(0x1fc8): func() {},
+		sp(0x1f33): e.spProtEvil10, sp(0x1fc8): func() {}, sp(0x1fcd): func() {},
 		sp(0x1fd2): func() { e.healChar(int(e.spellTarget), e.rollDice(3, 8, 3)) },
 		sp(0x1ff9): func() { e.touchAttack(3, 8, 3) }, sp(0x2011): func() { e.castMissile(8) },
 		sp(0x2050): e.spRaiseDead, sp(0x21bc): e.spLayOnHands,
 	}
+	// spellAreaHit wrappers ports S0ef3_10f2 S0ef3_12e3 S0ef3_141e S0ef3_146b S0ef3_162a
+	// (also ports) S0ef3_2032 S0ef3_208a.
 	e.spellHit = map[uint32]func(o *FlyingObject, blk int) bool{
 		sp(0x10f2): func(o *FlyingObject, b int) bool {
 			return e.spellAreaHit(o, 1, 4, 1, (e.mageLevel(int(int8(o.U11)))-1)>>1)
@@ -99,12 +107,14 @@ func (e *Engine) loadSpells() {
 		sp(0x20a8): e.disintegrateHit,
 		sp(0x2145): e.deathSpellHit,
 	}
+	// Expire callbacks ports S0ef3_0f86 S0ef3_10ae S0ef3_1176 S0ef3_14f9 S0ef3_16dc
+	// (also ports) S0ef3_1894 S0ef3_1b13 S0ef3_1b8d S0ef3_1c45 S0ef3_1cd2 S0ef3_1e6c S0ef3_1f8f.
 	e.spellEnd = map[uint32]func(c int){
 		sp(0x0f86): func(c int) { e.recalcArmorClass(c) },
 		sp(0x10ae): func(c int) { e.Vars.Raw[10] &^= 1; e.refreshCursor() },
 		sp(0x1176): func(c int) { e.Chars[c].EffectFlags &^= 2; e.recalcArmorClass(c) },
 		sp(0x1233): e.removeMagicHandItems,
-		sp(0x12a1): func(c int) { e.Chars[c].EffectFlags &^= 4; e.drawCharPanel(int(e.spellCaster)) },
+		sp(0x12a1): e.endInvisibility,
 		sp(0x14f9): func(c int) { e.Chars[c].EffectFlags &^= 8 },
 		sp(0x16dc): func(c int) {
 			ch := &e.Chars[c]
@@ -125,7 +135,7 @@ func (e *Engine) loadSpells() {
 			ch.EffectFlags &^= 0x40
 		},
 		sp(0x1cd2): func(c int) { e.Chars[c].EffectFlags &^= 0x80 },
-		sp(0x1e1d): func(c int) { e.Chars[c].EffectFlags &^= 0x100; e.recalcArmorClass(int(e.spellCaster)) },
+		sp(0x1e1d): func(c int) { e.Chars[c].EffectFlags &^= 0x100; e.recalcArmorClass(int(e.spellCasterChar)) }, // ports S0ef3_1e1d
 		sp(0x1e6c): func(c int) { e.Vars.Raw[10] &^= 0x20; e.DrawPlayfield() },
 		sp(0x1f8f): func(c int) {
 			for i := 0; i < 6; i++ {
@@ -454,8 +464,13 @@ func (e *Engine) touchAttack(times, pips, mod int) {
 	}
 }
 
-func (e *Engine) printMessageNow(s string) { e.printMessage(s) }
+// printMessageNow ports S082c_0b8f: message plus the 0x4f "fail" sound.
+func (e *Engine) printMessageNow(s string) {
+	e.printMessage(s)
+	e.playSound(0x4f)
+}
 
+// spArmor ports S0ef3_0f0b.
 func (e *Engine) spArmor() {
 	ch := &e.Chars[e.spellTarget]
 	dex := int(e.X.I16(dsDexAC + int(ch.DexCur)*2))
@@ -467,7 +482,18 @@ func (e *Engine) spArmor() {
 	}
 }
 
+// spBurningHands ports S0ef3_0f99.
 func (e *Engine) spBurningHands() {
+	for i := 0; i < 6; i++ {
+		k, fl := int(e.X.I8(dsBurnShape+i)), 0
+		if k < 0 {
+			k, fl = -k, gfx.DrawFlip
+		}
+		if k >= 1 && k <= len(e.MiscShapes) { // shape ptrs ds:fb34+k*4 = MiscShapes[k-1]
+			e.Scr.DrawShape(0, e.MiscShapes[k-1], int(e.X.I16(dsBurnX+i*2)), int(e.X.I8(dsBurnY+i)), 0, fl)
+		}
+	}
+	e.seqDelay(2)
 	lvl := e.mageLevel(int(e.spellCasterChar))
 	blk := e.calcNewBlock(e.CurrentBlock, e.CurrentDirection)
 	e.areaDamageFront(blk, 1, 3, lvl*2, 1)
@@ -506,6 +532,7 @@ func (e *Engine) areaDamageMonster(mi, times, pips, mod, save int) {
 	}
 }
 
+// spDetectMagic ports S0ef3_1069.
 func (e *Engine) spDetectMagic() {
 	e.Vars.Raw[10] |= 1
 	e.refreshCursor()
@@ -513,6 +540,7 @@ func (e *Engine) spDetectMagic() {
 	e.setSpellTimer(int(e.curSpell), 0, 0x222, 2, true)
 }
 
+// spShield ports S0ef3_1122.
 func (e *Engine) spShield() {
 	c := int(e.spellCasterChar)
 	e.Chars[c].EffectFlags |= 2
@@ -520,39 +548,43 @@ func (e *Engine) spShield() {
 	e.setSpellTimer(int(e.curSpell), 0, 0x222, 5, true)
 }
 
+// magicHandSlot ports S0ef3_0482 (called with the target char ds:f51c).
 func (e *Engine) magicHandSlot() int {
-	if e.Chars[e.spellCasterChar].Inventory[1] == 0 {
+	if e.Chars[e.spellTarget].Inventory[1] == 0 {
 		return 1
 	}
 	return 0
 }
 
+// spShockingGrasp ports S0ef3_1197.
 func (e *Engine) spShockingGrasp() {
 	c := int(e.spellCasterChar)
 	h := e.magicHandSlot()
 	t := e.allocTempItemType(0, 0, 0, 0xf, 1, 8, e.mageLevel(c), 1)
 	it := e.allocTempItem(0x10, 0x52, 0, t)
-	e.Chars[c].Inventory[h] = uint16(it)
+	e.Chars[e.spellTarget].Inventory[h] = uint16(it)
 	e.drawCharPanel(c)
 	e.setSpellTimer(int(e.curSpell), 0, 0x222, 1, true)
 }
 
+// spVampiricTouch ports S0ef3_1656.
 func (e *Engine) spVampiricTouch() {
 	c := int(e.spellCasterChar)
 	h := e.magicHandSlot()
 	t := e.allocTempItemType(0, 0, 0, 0xf, e.mageLevel(c)>>1, 6, 0, 1)
 	it := e.allocTempItem(0x18, 0x53, 0, t)
-	e.Chars[c].Inventory[h] = uint16(it)
+	e.Chars[e.spellTarget].Inventory[h] = uint16(it)
 	e.drawCharPanel(c)
 	e.setSpellTimer(int(e.curSpell), 0, 0x222, 1, true)
 }
 
+// spFlameBlade ports S0ef3_1d38.
 func (e *Engine) spFlameBlade() {
 	c := int(e.spellCasterChar)
 	h := e.magicHandSlot()
 	t := e.allocTempItemType(0, 0, 0, 0xf, 1, 4, 4, 1)
 	it := e.allocTempItem(0, 0x54, 0, t)
-	e.Chars[c].Inventory[h] = uint16(it)
+	e.Chars[e.spellTarget].Inventory[h] = uint16(it)
 	e.drawCharPanel(c)
 	e.setSpellTimer(int(e.curSpell), 4, 0x222, e.clericLevel(c)>>1, true)
 }
@@ -616,11 +648,13 @@ func (e *Engine) allocTempItem(name, icon, value, typ int) int {
 	return si
 }
 
+// spInvisibility ports S0ef3_127f.
 func (e *Engine) spInvisibility() {
 	e.Chars[e.spellTarget].EffectFlags |= 4
 	e.drawCharPanel(int(e.spellTarget))
 }
 
+// spInvis10 ports S0ef3_15d0.
 func (e *Engine) spInvis10() {
 	for c := 0; c < 6; c++ {
 		e.Chars[c].EffectFlags |= 4
@@ -654,6 +688,7 @@ func (e *Engine) spDispel() {
 	e.drawCharPanel(c)
 }
 
+// spHaste ports S0ef3_1497.
 func (e *Engine) spHaste() {
 	for c := 0; c < 6; c++ {
 		if e.Chars[c].Flags&1 == 0 {
@@ -661,7 +696,7 @@ func (e *Engine) spHaste() {
 		}
 		e.Chars[c].EffectFlags |= 8
 		e.spellTarget = int8(c)
-		e.setSpellTimer(int(e.curSpell), 3, 0x222, 0, true)
+		e.setSpellTimer(int(e.curSpell), 3, 0x222, 1, true)
 	}
 }
 
@@ -696,6 +731,7 @@ func (e *Engine) monsterFlee(m *Monster) {
 	m.Flags |= 8
 }
 
+// spStoneskin ports S0ef3_1865.
 func (e *Engine) spStoneskin() {
 	e.Chars[e.spellTarget].EffectsRemainder[1] = byte(e.rollDice(1, 4, 0) + e.mageLevel(int(e.spellCasterChar))>>1)
 }
@@ -733,6 +769,7 @@ func (e *Engine) spConeOfCold() {
 	e.flushMonsterHits()
 }
 
+// spBless ports S0ef3_1ad0.
 func (e *Engine) spBless() {
 	if e.Vars.Raw[10]&0x10 == 0 {
 		e.setSpellTimer(int(e.curSpell), 0, 0x222, 6, true)
@@ -743,11 +780,13 @@ func (e *Engine) spBless() {
 	}
 }
 
+// spProtEvil ports S0ef3_1b5a.
 func (e *Engine) spProtEvil() {
 	e.Chars[e.spellTarget].EffectFlags |= 0x200
 	e.setSpellTimer(int(e.curSpell), 0, 0x222, 3, true)
 }
 
+// spAid ports S0ef3_1ba3.
 func (e *Engine) spAid() {
 	c := int(e.spellTarget)
 	if !e.charStatus(c, 3) {
@@ -764,6 +803,7 @@ func (e *Engine) spAid() {
 	e.setSpellTimer(int(e.curSpell), 1, 0x222, 1, true)
 }
 
+// spSlowPoison ports S0ef3_1c75.
 func (e *Engine) spSlowPoison() {
 	c := int(e.spellTarget)
 	if e.Chars[c].Flags&2 == 0 {
@@ -774,25 +814,29 @@ func (e *Engine) spSlowPoison() {
 	e.setSpellTimer(int(e.curSpell), 1, 0x7ff8, e.clericLevel(int(e.spellCasterChar)), true)
 }
 
+// spCreateFood ports S0ef3_1dc0.
 func (e *Engine) spCreateFood() {
 	for c := 0; c < 6; c++ {
 		e.Chars[c].Food = 100
 	}
 }
 
+// spVestment ports S0ef3_1ddf.
 func (e *Engine) spVestment() {
 	c := int(e.spellCasterChar)
-	e.Chars[c].EffectFlags |= 0x100
+	e.Chars[e.spellTarget].EffectFlags |= 0x100
 	e.recalcArmorClass(c)
 	e.setSpellTimer(int(e.curSpell), 0, 0x222, 5, true)
 }
 
+// spPrayer ports S0ef3_1e3e.
 func (e *Engine) spPrayer() {
 	e.Vars.Raw[10] |= 0x20
 	e.setSpellTimer(int(e.curSpell), 0, 0x222, 2, true)
 	e.DrawPlayfield()
 }
 
+// spRemoveParalysis ports S0ef3_1e7e.
 func (e *Engine) spRemoveParalysis() {
 	n := 4
 	for c := 0; c < 6 && n > 0; c++ {
@@ -813,6 +857,7 @@ func (e *Engine) curePoison(c int) {
 	e.drawCharPanel(c)
 }
 
+// spNeutralizePoison ports S0ef3_1f0b.
 func (e *Engine) spNeutralizePoison() {
 	c := int(e.spellTarget)
 	if e.Chars[c].Flags != 0 {
@@ -822,6 +867,7 @@ func (e *Engine) spNeutralizePoison() {
 	}
 }
 
+// spProtEvil10 ports S0ef3_1f33.
 func (e *Engine) spProtEvil10() {
 	for c := 0; c < 6; c++ {
 		e.Chars[c].EffectFlags |= 0x200
@@ -830,6 +876,7 @@ func (e *Engine) spProtEvil10() {
 	e.DrawPlayfield()
 }
 
+// spRaiseDead ports S0ef3_2050.
 func (e *Engine) spRaiseDead() {
 	c := int(e.spellTarget)
 	ch := &e.Chars[c]
@@ -841,6 +888,7 @@ func (e *Engine) spRaiseDead() {
 	}
 }
 
+// spLayOnHands ports S0ef3_21bc.
 func (e *Engine) spLayOnHands() {
 	e.healChar(int(e.spellTarget), int(e.Chars[e.spellCasterChar].Level[0])*2)
 }
@@ -864,12 +912,15 @@ func (e *Engine) spellExpires(sp, c int) {
 }
 
 func (e *Engine) spellEffectEnds(c int) { e.recalcArmorClass(c) }
+
+// endInvisibility ports S0ef3_12a1 (redraws ds:dcfa, not c, as the original).
 func (e *Engine) endInvisibility(c int) {
 	e.Chars[c].EffectFlags &^= 4
-	e.drawCharPanel(c)
+	e.drawCharPanel(int(e.spellTarget))
 }
 
 // refreshCursor is the cursor rebuild in S0ef3_1069 / S0ef3_10ae.
+// (S1bf3_00a8(0,0) there only nudges the mouse driver.)
 func (e *Engine) refreshCursor() { e.setHandItem(e.heldItem()) }
 
 // recalcArmorClass ports S0de8_0d5e.

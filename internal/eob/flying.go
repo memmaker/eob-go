@@ -72,7 +72,7 @@ func (e *Engine) flyingObjectHit(o *FlyingObject, nb, sp int) bool {
 	if e.Blocks[nb].Flags&7 != 0 {
 		for i := range e.Monsters {
 			m := &e.Monsters[i]
-			if int(m.Block) == nb && (int(m.Pos) == sp || m.Pos == 4) {
+			if int(m.Block) == nb && (int(m.Pos) == sp || m.Pos == 4) { // ports S08e6_189d inline
 				if e.thrownHitsMonster(o, i) {
 					return true
 				}
@@ -86,6 +86,7 @@ func (e *Engine) flyingObjectHit(o *FlyingObject, nb, sp int) bool {
 	return false
 }
 
+// isThrowOrMissile ports S0de8_01d7.
 func (e *Engine) isThrowOrMissile(typ int) bool {
 	v := e.ItemTypes[typ].ExtraProps & 0x7f
 	return v == 2 || v == 3

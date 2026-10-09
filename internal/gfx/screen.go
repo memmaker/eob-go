@@ -35,6 +35,8 @@ const (
 	DrawRemap = 2
 )
 
+// DrawShape ports S082c_063b S082c_0681 S082c_06c7 S082c_070d (plain/flip/
+// remap/flip+remap via flags; 070d does not force x even, Go does).
 // DrawShape draws shp at absolute (x,y) on page, clipped to dim (as the
 // original: x is forced even; clipping window = dim rectangle).
 func (s *Screen) DrawShape(page int, shp *Shape, x, y, dim int, flags int) {

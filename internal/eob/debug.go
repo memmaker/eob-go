@@ -24,7 +24,12 @@ func (e *Engine) InitResources() error {
 	}
 	e.font = e.font8 // S07c8_043d
 	e.initGuiColors()
+	// ports O2106_0496: no swap, cleared shape pointers (Go zero values),
+	// character slot ids; the 0x514-byte per-character buffers are Go slices.
 	e.SwapChar = -1
+	for i := range e.Chars {
+		e.Chars[i].ID = byte(i)
+	}
 	if err := e.loadItems(); err != nil {
 		return err
 	}

@@ -19,6 +19,7 @@ type sceneState struct {
 
 func (e *Engine) vis(i int) *Block { return &e.Blocks[e.scene.visIndex[i]] }
 
+// hasWall ports O2116_042c.
 func (e *Engine) hasWall(w byte) bool { return w != 0 && e.WllWallFlags[w]&8 == 0 }
 
 // assignVisibleBlocks ports O2116_0000.
@@ -287,6 +288,7 @@ func (e *Engine) setLevelShapesDim(index int, dim int) {
 	e.setSceneDimBlocks(dim, x1, 0, x2, 15)
 }
 
+// setSceneDimBlocks ports O2116_0066.
 func (e *Engine) setSceneDimBlocks(dim, x1, y1, x2, y2 int) {
 	e.setScreenDim(dim, x1, y1*8, x2-x1, (y2-y1)*8)
 }

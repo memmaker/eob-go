@@ -192,10 +192,12 @@ func (e *Engine) campInput() int {
 	return 0
 }
 
+// inRect ports S082c_0613.
 func inRect(x, y, x1, y1, x2, y2 int) bool { return x >= x1 && x <= x2 && y >= y1 && y <= y2 }
 
 // campMessage ports O2102_13f7: shows string i in dim 11 until a key or
-// click, at most 120 ticks. O212a_0b9b is the rest overlay's copy.
+// click, at most 120 ticks. Also ports O212a_0b9b, the rest overlay's
+// byte-identical copy.
 func (e *Engine) campMessage(i int) {
 	defer e.setFont(e.setFont(e.font8))
 	d := &e.Scr.Dims[0xb]
@@ -767,6 +769,7 @@ func (e *Engine) scribeScrolls() {
 }
 
 // dropChar ports O2102_0000.
+// dropChar ports S082c_07c5 (3-way memcpy swap via temp, inlined).
 func (e *Engine) dropChar(c int) {
 	if c < 0 || !e.charStatus(c, 1) {
 		return
@@ -1010,6 +1013,7 @@ func (e *Engine) openCamp() {
 	e.present()
 }
 
+// sortSpells ports S082c_07a4 (byte swap helper, inlined).
 // sortSpells ports S0ef3_000e: bubble-sorts each 6-slot row of the mage and
 // cleric memorized lists; ready spells first, then cast (negated), empty last.
 func (e *Engine) sortSpells(c int) {

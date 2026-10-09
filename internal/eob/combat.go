@@ -400,6 +400,7 @@ func (e *Engine) increasePartyExperience(v int) {
 	}
 }
 
+// classPart ports S0a72_0509.
 func (e *Engine) classPart(class, i int) int { return int(int8(e.X.U8(dsClassParts + class*4 + i))) }
 
 // expForLevel ports S0a72_04b7.
@@ -518,6 +519,7 @@ func (e *Engine) savingThrowEffect(c, bit int, name string, saveType, dur, ev, u
 }
 
 // checkPartyDead ports S0de8_093b.
+// checkPartyDead ports S082c_0b43 (as seqDelay+seqWaitAny).
 func (e *Engine) checkPartyDead() {
 	for c := 0; c < 6; c++ {
 		if e.charStatus(c, 5) {
@@ -679,7 +681,7 @@ func (e *Engine) useItem(c, hand int) {
 	}
 	ch := &e.Chars[c]
 	it := int(ch.Inventory[hand])
-	h := hand
+	h := hand // ports S0bd2_1244 (slot > 1 -> -1)
 	if h > 1 {
 		h = -1
 	}

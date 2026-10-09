@@ -44,6 +44,15 @@ func (e *Engine) fxFrame(n int) {
 	}
 }
 
+// waitRetrace ports S1a16_0027 (S1de4_000d(1): one VGA vertical retrace,
+// 70 Hz in mode 13h), called n times; shows page 0 first.
+func (e *Engine) waitRetrace(n int) {
+	if e.Sys != nil {
+		e.present()
+		e.Sys.Sleep(n * 1000 / 70)
+	}
+}
+
 // rndRange ports S1aaa_0005.
 func (e *Engine) rndRange(lo, hi int) int {
 	for {
@@ -170,7 +179,7 @@ func (e *Engine) explodeFx(scale, spread, n, speed, shift, tbl, cx, cy int) {
 				dc[i] = 0
 			}
 		}
-		e.fxFrame(2)
+		e.waitRetrace(2) // two S1a16_0027 calls
 	}
 }
 
@@ -252,7 +261,7 @@ func (e *Engine) coneFx(n, radius, accel, speed, tbl int) {
 				dc[i] = 0
 			}
 		}
-		e.fxFrame(1)
+		e.waitRetrace(1)
 	}
 }
 
@@ -308,6 +317,12 @@ func (e *Engine) wandSparkle() {
 		e.Scr.CopyRegion(0, 0, 0, 0, 176, 120, scenePage, 0)
 		e.fxFrame(2)
 	}
-	copy(e.Scr.Pages[scenePage], bg)
-	e.Scr.CopyRegion(0, 0, 0, 0, 176, 120, scenePage, 0)
+	// The original restores only the 16 saved 16x16 blocks, onto page 0;
+	// page 2 keeps the last frame.
+	for i := 0; i < 16; i++ {
+		x, y := e.u8(dsWandX+i)&^7, e.u8(dsWandY+i)
+		for r := y; r < y+16 && r < 200; r++ {
+			copy(e.Scr.Pages[0][r*320+x:r*320+x+16], bg[r*320+x:r*320+x+16])
+		}
+	}
 }

@@ -67,7 +67,7 @@ func (e *Engine) initTimerHandlers() {
 	e.timerHandlers = map[uint32]func(int){
 		cbAddr(0x1414, 0x0000): e.timerSwapBlink,
 		cbAddr(0x1414, 0x03b4): e.timerDoorStep,
-		cbAddr(0x1414, 0x05df): e.updateMonsters,
+		cbAddr(0x1414, 0x05df): e.updateMonsters, // ports S1414_05df (thunk to S08e6_0cc8)
 		cbAddr(0x1414, 0x0285): e.timerFlyingObjects,
 		cbAddr(0x1414, 0x07ca): e.timerCharacter,
 		cbAddr(0x1414, 0x0ce7): e.monsterIdleJitter,

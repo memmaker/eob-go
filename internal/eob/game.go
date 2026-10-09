@@ -20,7 +20,7 @@ func (e *Engine) initHandlers() {
 		cbAddr(0x0acd, 0x0644): func(a int, ev Event) bool { e.clickedFloor(a, ev.Button); return true },
 		cbAddr(0x0acd, 0x0494): func(a int, _ Event) bool { e.throwFromMouse(a); return true },
 		cbAddr(0x0acd, 0x0034): func(a int, _ Event) bool { e.openInventory(a); return true },
-		cbAddr(0x0acd, 0x01c0): func(a int, _ Event) bool { e.clickedInvSlot(a); return true },
+		cbAddr(0x0acd, 0x01c0): func(a int, _ Event) bool { e.clickedInvSlot(a); return true }, // ports S0acd_01c0 (mouse hide/show is host-side)
 		cbAddr(0x0acd, 0x01e3): func(int, Event) bool { e.closeInventory(); return true },
 		cbAddr(0x0acd, 0x018e): func(int, Event) bool { e.toggleCharInfo(); return true },
 		cbAddr(0x0acd, 0x008c): func(int, Event) bool { e.invNextChar(-1); return true },
@@ -28,14 +28,14 @@ func (e *Engine) initHandlers() {
 		cbAddr(0x0ef3, 0x25bd): func(a int, _ Event) bool { e.spellbookTab(a); return true },
 		cbAddr(0x0ef3, 0x2929): func(a int, ev Event) bool { e.spellbookRow(a, ev); return true },
 		cbAddr(0x0ef3, 0x08cf): func(a int, _ Event) bool { e.spellTargetClicked(a); return true },
-		cbAddr(0x0acd, 0x078c): func(a int, _ Event) bool {
+		cbAddr(0x0acd, 0x078c): func(a int, _ Event) bool { // ports S0acd_078c; its S0d1c_0078/S0d1c_006d calls are empty stubs: ports S0d1c_0078 S0d1c_006d as no-ops
 			if !e.charStatus(a, 1) {
 				return true
 			}
 			e.selectChar(a)
 			return false
 		},
-		cbAddr(0x0acd, 0x08d1): func(int, Event) bool { e.eatFood(int(e.SelectedChar)); return true },
+		cbAddr(0x0acd, 0x08d1): func(int, Event) bool { e.eatFood(int(e.SelectedChar)); return true }, // ports S0acd_08d1
 		cbAddr(0x0acd, 0x0264): func(a int, _ Event) bool { return e.clickedCharName(a) },
 		cbAddr(0x0acd, 0x0393): func(int, Event) bool { return e.cancelSwap() },
 		cbAddr(0x2102, 0x0020): func(int, Event) bool { e.openCamp(); return true },
@@ -61,7 +61,7 @@ func (e *Engine) checkMove(block, dir int) int {
 	return nb
 }
 
-// moveRel ports the four step buttons S0acd_04f8/0529/05ba/05ff.
+// moveRel ports the four step buttons S0acd_04f8 S0acd_0529 S0acd_05ba S0acd_05ff.
 func (e *Engine) moveRel(rel int) {
 	d := (e.CurrentDirection + rel) & 3
 	nb := e.checkMove(e.CurrentBlock, d)
@@ -104,7 +104,7 @@ func (e *Engine) flyingObjectsHitParty() {
 	}
 }
 
-// turn ports the turn buttons S0acd_056c/0593.
+// turn ports the turn buttons S0acd_056c S0acd_0593.
 func (e *Engine) turn(d int) {
 	e.CurrentDirection = (e.CurrentDirection + d) & 3
 	e.kbdFloorPos = -1
@@ -134,7 +134,14 @@ func (e *Engine) playMusic(id int) {
 	}
 }
 
+// activeButtons recomputes the list the original installs explicitly: it
+// ports S0cf7_0007 (list reset) S0cf7_0028 (playfield / spellbook),
+// ports S0cf7_00b4 (inventory) S0cf7_0140 (GuiMode 2) S0cf7_01cc (swap),
+// ports S0cf7_0211 (spell target list ds:5462, set by S0ef3_059d).
 func (e *Engine) activeButtons() []int {
+	if e.book.waiting {
+		return e.buttonList(0x5462, 7)
+	}
 	if e.SwapChar != -1 {
 		return e.buttonList(dsListSwap, 7)
 	}
@@ -157,6 +164,8 @@ func (e *Engine) activeButtons() []int {
 }
 
 // Run is the engine main entry (runs on its own goroutine).
+// Run ports S07c8_0001 S07a9_000a (startup/init; DOS memory, driver and
+// buffer allocation replaced by Go/host).
 // An empty savePath shows the main menu (load EOBDATA.SAV / new party).
 func (e *Engine) Run(savePath string) (err error) {
 	defer func() {
@@ -224,7 +233,7 @@ func (e *Engine) Run(savePath string) (err error) {
 				continue
 			}
 			if !e.processButtons(ev, e.activeButtons()) && ev.Kind == EvKeyDown {
-				e.kbdCommand(ev.Key) // S0acd_0e6c
+				e.kbdCommand(ev.Key) // ports S0acd_0e6c (leftover input -> S0acd_0d9d)
 			}
 		}
 		if e.TurnBased && e.turnLeft == 0 { // world waits: hold game time
@@ -254,7 +263,7 @@ func (e *Engine) present() {
 	// composite the mouse cursor (item icon) onto a copy of page 0
 	copy(e.Scr.Pages[15], e.Scr.Pages[0])
 	mx, my := e.Sys.Mouse()
-	shp := e.ItemIcons[0]
+	shp := e.ItemIcons[0] // default pointer: ports O2106_0000 (ITEMICN 0,0,16x16 icon)
 	hx, hy, hf := 0, 0, 0
 	if e.HandItem != 0 {
 		ic := int(byte(e.Items[e.HandItem].Icon))

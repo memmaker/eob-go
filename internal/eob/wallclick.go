@@ -42,6 +42,7 @@ func (e *Engine) clickedWall(block, dir int) bool {
 	return r
 }
 
+// mouseIn ports S082c_0a5d.
 func (e *Engine) mouseIn(x1, y1, x2, y2 int) bool {
 	mx, my := e.mouseX, e.mouseY
 	return mx >= x1 && mx <= x2 && my >= y1 && my <= y2
