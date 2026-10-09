@@ -127,7 +127,7 @@ func (e *Engine) drawCharPanel(c int) {
 		e.drawCharBorder(c)
 		if ch.DamageTaken > 0 {
 			s := itoa(int(ch.DamageTaken))
-			e.Scr.DrawShape(2, e.MiscShapes[3], x+0xd, si+0x1e, 0, 0)
+			e.Scr.DrawShape(2, e.MiscShapes[3], x+0xd, si+0x1e, 0, gfx.DrawOddX) // S1547_0b3e direct S1a29_000f
 			e.printText(s, x+0x22-len(s)*3, si+0x2a, 0xf, 0)
 		}
 		e.drawPage = old
@@ -270,7 +270,7 @@ func (e *Engine) drawHand(c, hand int) {
 // drawSlotStatus ports S1547_0642 (MISS/HACK/... or damage number).
 func (e *Engine) drawSlotStatus(x, y, v int) {
 	if v > -3 {
-		e.Scr.DrawShape(e.drawPage, e.MiscShapes[4], x-1, y, 0, 0)
+		e.Scr.DrawShape(e.drawPage, e.MiscShapes[4], x-1, y, 0, gfx.DrawOddX) // S1547_067d direct S1a29_000f
 	} else {
 		e.Scr.DrawBox3D(e.drawPage, x, y, x+0x1e, y+0xf, e.col.BtnFill, e.col.BtnHi, int(e.col.BtnLo))
 	}

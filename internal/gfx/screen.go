@@ -33,6 +33,7 @@ func New() *Screen {
 const (
 	DrawFlip  = 1
 	DrawRemap = 2
+	DrawOddX  = 4 // keep odd x: S1a29_000f called directly skips the S082c wrappers' x&~1
 )
 
 // DrawShape ports S082c_063b S082c_0681 S082c_06c7 S082c_070d (plain/flip/
@@ -46,7 +47,7 @@ func (s *Screen) DrawShape(page int, shp *Shape, x, y, dim int, flags int) {
 	if shp == nil {
 		return
 	}
-	if flags&(DrawFlip|DrawRemap) != DrawFlip|DrawRemap {
+	if flags&DrawOddX == 0 && flags&(DrawFlip|DrawRemap) != DrawFlip|DrawRemap {
 		x &^= 1
 	}
 	cx1, cy1, cx2, cy2 := 0, 0, 320, 200

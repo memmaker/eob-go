@@ -82,7 +82,8 @@ func (e *Engine) drawMenu(m, strs int, mask uint32, bit, gap int) {
 			e.printText(s, x, y+i*rowH, byte(d.UnkC), 0)
 		}
 	}
-	e.present() // S1aad_0480 input flush omitted: it would eat scripted/type-ahead menu keys
+	e.present()
+	e.flushInput() // S1aad_0480
 }
 
 // pollMenu ports S14ef_0274: handles one input event and returns the chosen
