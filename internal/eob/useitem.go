@@ -30,7 +30,8 @@ func (e *Engine) consumeFood(c, it int) {
 }
 
 // eatFromSlot (extension) is a right click on an inventory slot: the shown
-// character eats the food in it. False if the click hit no food.
+// character eats the food or drinks the potion in it. False if the click hit
+// neither.
 func (e *Engine) eatFromSlot(ev Event) bool {
 	for _, k := range e.activeButtons() {
 		b := &e.ButtonDefs[k]
@@ -39,7 +40,14 @@ func (e *Engine) eatFromSlot(ev Event) bool {
 		}
 		c, slot := e.InvChar, b.Arg
 		it := int(e.Chars[c].Inventory[slot])
-		if slot == 16 || !isFood(e.Items[it].Type) {
+		if slot == 16 {
+			return false
+		}
+		if it != 0 && e.ItemTypes[e.Items[it].Type].ExtraProps&0x7f == 0xe { // potion
+			e.useItem(c, slot)
+			return true
+		}
+		if !isFood(e.Items[it].Type) {
 			return false
 		}
 		if !e.charStatus(c, 5) {
