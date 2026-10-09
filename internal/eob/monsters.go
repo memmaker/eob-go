@@ -576,12 +576,12 @@ func (e *Engine) damageMonster(m *Monster, dmg int) {
 
 // monsterHitFlash ports S08e6_0dca.
 func (e *Engine) monsterHitFlash(m *Monster) {
-	if !e.blockVisible(int(m.Block)) {
+	e.blockVisible(int(m.Block))
+	if !e.sceneUpdate { // original tests ds:df4c, which may already be set
 		return
 	}
 	m.Flags |= 2
-	e.redrawSceneNow()
-	e.waitTicks(1)
+	e.redrawSceneNow() // no delay in the original
 	m.Flags &^= 2
 	e.sceneUpdate = true
 }
@@ -601,10 +601,7 @@ func (e *Engine) flushMonsterHits() {
 			e.killMonster(m)
 		}
 	}
-	if any {
-		e.sceneUpdate = true
-		e.waitTicks(1)
-	}
+	e.sceneUpdate = any // original assigns, so no hit clears it
 	e.monsterWasHit = false
 	e.batchHits = false
 }

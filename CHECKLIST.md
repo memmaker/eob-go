@@ -101,7 +101,7 @@ All game assets, tables and text are read from the original files at runtime (EO
 - [ ] Full playthrough to the ending
 - [x] Level sweep: every enterable block of levels 1-12 entered through Run (TestLevelSweep; answers NPC dialogue, returns from stairs to a script-free block)
 - [x] Routine inventory: tools/parity.py exits 0 — all 749 EOB.EXE routines ported (520) or exempt with reason (229)
-- [x] Ghidra parity review of every ported routine: tools/review_cov.py exits 0 — 520/520 reviewed in tools/parity_review.txt (match/fixed/gap). Known gaps (documented, original-memory quirks): O20f6_26c6 class item -1 table tail, O20f6_00f7 low-memory flag, S08e6_0dca/0e48 hit-flash flags, O211e_1e1b dissolve pacing.
+- [x] Ghidra parity review of every ported routine: tools/review_cov.py exits 0 — 520/520 reviewed in tools/parity_review.txt (match/fixed/gap). Known gaps (documented, original-memory quirks): O20f6_26c6 class item -1 table tail, O20f6_00f7 low-memory flag, O211e_1e1b dissolve pacing.
 
 ## 11. Extensions (not in the original)
 - [x] Turn-based mode (Space, "TURN" badge; moves, attacks, casts, throws, wall/floor clicks, equipping cost a turn)
