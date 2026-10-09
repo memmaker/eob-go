@@ -143,6 +143,8 @@ var helpSections = [2][]struct {
 		{"D-pad", "move, turn"},
 		{"LB / RB", "step left, right"},
 		{"X", "attack"},
+		{"LT / RT", "pick up / throw"},
+		{"R3", "use front wall"},
 		{"Y", "minimap"},
 		{"L3", "turn mode"},
 		{"Start", "camp"},
@@ -176,8 +178,9 @@ type game struct {
 var padKeys = map[ebiten.StandardGamepadButton]int{
 	ebiten.StandardGamepadButtonFrontTopLeft: eob.KeyKP4, ebiten.StandardGamepadButtonFrontTopRight: eob.KeyKP6,
 	ebiten.StandardGamepadButtonRightLeft: eob.KeyAttack, ebiten.StandardGamepadButtonLeftStick: eob.KeySpace, ebiten.StandardGamepadButtonRightTop: eob.KeyTab,
-	ebiten.StandardGamepadButtonCenterRight: 48, // camp
-	ebiten.StandardGamepadButtonRightStick:  eob.KeyEsc,
+	ebiten.StandardGamepadButtonCenterRight:     48, // camp
+	ebiten.StandardGamepadButtonRightStick:      52, // R: use the wall in front
+	ebiten.StandardGamepadButtonFrontBottomLeft: eob.KeyPickup, ebiten.StandardGamepadButtonFrontBottomRight: eob.KeyThrow,
 }
 
 // padButtons are reported as pad events at the cursor; the engine makes them
