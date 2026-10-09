@@ -36,8 +36,8 @@ func (e *Engine) markSeen() {
 
 // visibleSlots tells which of the 18 view slots (visIndex) the party can
 // actually see. Sight spreads from the party's block forward and sideways,
-// into a neighbour only through an open (passable) face of the block it
-// leaves: walls and closed doors are seen, what lies behind them is not.
+// to every neighbour, and on through a neighbour only if its face toward
+// the party is passable: walls and closed doors are seen, not what's behind.
 // ponytail: a grid flood, not a perspective test; it can see round a
 // corner the 3D view would hide at the far edge of a row.
 func (e *Engine) visibleSlots() [18]bool {
@@ -54,15 +54,18 @@ func (e *Engine) visibleSlots() [18]bool {
 	vis[start] = true
 	for q := [][2]int{{0, 0}}; len(q) > 0; q = q[1:] {
 		c := q[0]
-		blk := e.scene.visIndex[slot[c]]
 		for _, st := range steps {
 			n := [2]int{c[0] + st.df, c[1] + st.dl}
 			i, ok := slot[n]
-			if !ok || vis[i] || e.WllWallFlags[e.Blocks[blk].Walls[st.dir]]&1 == 0 {
+			if !ok || vis[i] {
 				continue
 			}
 			vis[i] = true
-			q = append(q, n)
+			// entering n is decided by n's face toward us (as monsters.go
+			// moves), not by the face of the block we leave
+			if e.WllWallFlags[e.Blocks[e.scene.visIndex[i]].Walls[st.dir^2]]&1 != 0 {
+				q = append(q, n)
+			}
 		}
 	}
 	return vis
