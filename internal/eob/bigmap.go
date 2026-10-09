@@ -70,6 +70,7 @@ func (e *Engine) bigMap() {
 				e.editPOI(cellAt(ev.X, ev.Y))
 			default:
 				if e.autoPath = e.findPath(cellAt(ev.X, ev.Y)); e.autoPath != nil {
+					e.autoSpots = e.visibleSpots()
 					return
 				}
 			}
@@ -153,4 +154,35 @@ func (e *Engine) autoWalk() {
 	default:
 		e.turn(1)
 	}
+}
+
+// visibleSpots maps the drawn blocks holding monsters (bit 0) or items
+// (bit 1) to those bits.
+func (e *Engine) visibleSpots() map[int]int {
+	r := map[int]int{}
+	for _, b := range e.scene.visIndex {
+		k := 0
+		if e.Blocks[b].Flags&7 != 0 {
+			k |= 1
+		}
+		if e.Blocks[b].ItemHead != 0 {
+			k |= 2
+		}
+		if k != 0 {
+			r[b] = k
+		}
+	}
+	return r
+}
+
+// autoWatch ends an auto-walk when the scene just drawn shows a monster or
+// item that was not in view before.
+func (e *Engine) autoWatch() {
+	now := e.visibleSpots()
+	for b, k := range now {
+		if k&^e.autoSpots[b] != 0 {
+			e.autoPath = nil
+		}
+	}
+	e.autoSpots = now
 }

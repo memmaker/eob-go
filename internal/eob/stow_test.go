@@ -182,3 +182,21 @@ func TestSwitchColor(t *testing.T) {
 		t.Fatal("block 0 marked")
 	}
 }
+
+// An auto-walk stops when a monster or item comes into view, not for one
+// already in view when it started.
+func TestAutoWatch(t *testing.T) {
+	e := &Engine{}
+	e.scene.visIndex[3], e.scene.visIndex[5] = 100, 200
+	e.Blocks[100].ItemHead = 7 // in view from the start
+	e.autoPath, e.autoSpots = []int{0, 0}, e.visibleSpots()
+	e.autoWatch()
+	if e.autoPath == nil {
+		t.Fatal("stopped for an item already in view")
+	}
+	e.Blocks[200].Flags = 1 // a monster steps into view
+	e.autoWatch()
+	if e.autoPath != nil {
+		t.Fatal("kept walking with a new monster in view")
+	}
+}

@@ -291,6 +291,9 @@ func (e *Engine) Run(savePath string) (err error) {
 		if e.sceneUpdate { // S0acd_0e8a order: timers, scene, ambient, sound, turn undead
 			e.DrawScene(true)
 			e.sceneUpdate = false
+			if e.autoPath != nil {
+				e.autoWatch() // a monster or item came into view: stop
+			}
 		}
 		e.ambientSound()
 		e.playSoundUpdate(0) // S0acd_0e8a flushes the queued sound each loop
