@@ -844,8 +844,8 @@ func (e *Engine) removeChar(c int) {
 		it := e.unlinkListItem(&ch.Inventory[16], 0, -1)
 		e.linkItemToBlock(e.CurrentBlock, it, pos())
 	}
-	if int(e.SelectedChar) == c {
-		e.SelectedChar = 0
+	if int(e.SelectedChar) == c { // ds:1f3a is both the selected and the inventory char
+		e.SelectedChar, e.InvChar = 0, 0
 	}
 	e.rebuildCharTimers()
 }

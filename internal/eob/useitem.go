@@ -7,7 +7,7 @@ func (e *Engine) eatFood(c int) {
 		e.printMessage(sprintfC(e.X.Str(0x376a), ch.NameStr()))
 		return
 	}
-	it := e.HandItem
+	it := e.heldItem()
 	if t := e.Items[it].Type; t != 0x1f && t != 0x31 {
 		if it != 0 {
 			e.printMessage(e.X.Str(0x378c))

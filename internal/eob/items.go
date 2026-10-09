@@ -282,6 +282,7 @@ func (e *Engine) kbdMoveHand(d int) {
 		}
 		e.kbdSlot = 0
 	}
+	e.SelectedChar = int8(e.InvChar) // one variable (ds:1f3a) in the original
 	e.drawCharPanel(old)
 	if e.InvChar != old {
 		e.drawCharPanel(e.InvChar)

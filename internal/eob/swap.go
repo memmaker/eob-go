@@ -61,6 +61,7 @@ func (e *Engine) selectChar(c int) {
 	}
 	old := int(e.SelectedChar)
 	e.SelectedChar = int8(c)
+	e.InvChar = c // same variable ds:1f3a in the original
 	e.drawCharPanel(old)
 	e.drawCharPanel(c)
 }

@@ -211,12 +211,15 @@ func (e *Engine) toggleCharInfo() {
 
 // openInventory ports S0acd_0034 (portrait click); the save+redraw is
 // the inlined S0bd2_0abe: ports S0bd2_0abe.
+// A key press (ds:fc82) opens the current character without the status test.
 func (e *Engine) openInventory(c int) {
-	if !e.charStatus(c, 1) {
+	if e.btnKey == 0 && !e.charStatus(c, 1) {
 		return
 	}
 	e.GuiMode = 1
-	e.InvChar = c
+	if e.btnKey == 0 {
+		e.InvChar, e.SelectedChar = c, int8(c)
+	}
 	e.Scr.CopyRegion(176, 0, 176, 0, 144, 168, 0, 13) // save playfield panel
 	e.drawInvPanel(c)
 }
@@ -295,14 +298,32 @@ func (e *Engine) classCanUse(c, it int) bool {
 	return e.ItemTypes[e.Items[it].Type].AllowedClasses&e.X.U8(0x1231+int(e.Chars[c].Class)) != 0
 }
 
-// invNextChar ports S0acd_008c / S0acd_00eb.
-func (e *Engine) invNextChar(d int) {
-	for {
-		e.InvChar = (e.InvChar + d + 6) % 6
-		if e.charStatus(e.InvChar, 1) {
-			break
+// invNextChar ports S0acd_008c / S0acd_00eb. Keys (ds:fc82) pick a char
+// directly: 008c F1/F2 -> 0/1 unchecked; 00eb F3/F4 -> 2/3, F5/F6 (arg 2)
+// -> 4/5, kept only if active.
+func (e *Engine) invNextChar(d, arg int) {
+	old := e.InvChar
+	switch {
+	case e.btnKey != 0 && d < 0:
+		e.InvChar = e.btnKey - 1
+	case e.btnKey != 0:
+		e.InvChar = e.btnKey + 1
+		if arg == 2 {
+			e.InvChar += 2
+		}
+	default:
+		for {
+			e.InvChar = (e.InvChar + d + 6) % 6
+			if e.charStatus(e.InvChar, 1) {
+				break
+			}
 		}
 	}
+	if d > 0 && !e.charStatus(e.InvChar, 1) {
+		e.InvChar = old
+		return
+	}
+	e.SelectedChar = int8(e.InvChar)
 	e.drawInvPanel(e.InvChar)
 }
 

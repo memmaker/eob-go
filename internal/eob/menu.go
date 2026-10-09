@@ -247,6 +247,9 @@ func (e *Engine) frontEnd() error {
 			return err
 		}
 		e.CurrentBlock, e.CurrentDirection = 0x1ea, 0
+		if !e.KbdMode {
+			e.setHandItem(0)
+		}
 	} else { // ports S0acd_0f72 (ds:a998 != 0: game loaded from the menu)
 		if !e.KbdMode {
 			e.setHandItem(e.HandItem)
@@ -258,7 +261,7 @@ func (e *Engine) frontEnd() error {
 	// ports S0acd_0f72 tail (Run adds DrawPlayfield/DrawScene/setDim(7));
 	// ds:dcaa=1 is not modelled (see kbdCommand).
 	e.SpellbookOpen = false // ds:f3b9
-	e.SelectedChar = 0      // ds:a99a
+	e.SelectedChar, e.InvChar = 0, 0 // ds:1f3a
 	e.loadPlayfield()
 	return nil
 }

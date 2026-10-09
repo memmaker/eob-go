@@ -275,8 +275,8 @@ func (e *Engine) dropCharacter(c int) {
 		}
 		e.dropAtParty(it)
 	}
-	if e.InvChar == c {
-		e.InvChar = 0
+	if e.InvChar == c { // ds:1f3a is both the selected and the inventory char
+		e.InvChar, e.SelectedChar = 0, 0
 	}
 	e.rebuildCharTimers()
 }

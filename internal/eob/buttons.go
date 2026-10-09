@@ -72,10 +72,17 @@ func (e *Engine) processButtons(ev Event, list []int) bool {
 	for _, k := range list {
 		b := &e.ButtonDefs[k]
 		hit := false
+		e.btnKey = 0
 		switch ev.Kind {
 		case EvKeyDown:
 			key := ev.Key
 			hit = key != 0 && (b.Key == key || b.Key2 == key)
+			if hit {
+				e.btnKey = 1
+				if b.Key != key {
+					e.btnKey = 2
+				}
+			}
 		case EvMouseDown, EvMouseUp:
 			if b.W <= 0 || b.H <= 0 || ev.X < b.X || ev.X >= b.X+b.W || ev.Y < b.Y || ev.Y >= b.Y+b.H {
 				continue

@@ -278,7 +278,7 @@ func (e *Engine) spellAreaHit(o *FlyingObject, times, pips, mod, mult int) bool 
 		} else {
 			sp := e.u8(dsDscItemPosIndex + e.CurrentDirection*4 + int(o.CurPos&3))
 			c := sp
-			if sp > 2 && (e.charStatus(5, 1) || e.charStatus(6%6, 1)) && e.rollDice(1, 2, -1) != 0 {
+			if sp > 2 && (e.charStatus(5, 1) || e.charStatus(6, 1)) && e.rollDice(1, 2, -1) != 0 {
 				c = sp + 2
 			}
 			if o.Item == 0 && e.Chars[c%6].EffectFlags&2 != 0 {
@@ -318,7 +318,7 @@ func (e *Engine) charSaveHalf(c, d int) int {
 
 // monsterSaveHalf ports S0de8_0fca.
 func (e *Engine) monsterSaveHalf(m *Monster, d int) int {
-	if e.rollDice(1, 20, 0) >= e.savingThrowValue(0, e.mprop(m, 2), 4) {
+	if e.rollDice(1, 20, 0) >= e.savingThrowValue(0, int(int8(e.mprop(m, 2))), 4) {
 		d >>= 1
 	}
 	return d
@@ -412,9 +412,9 @@ func (e *Engine) disintegrateHit(o *FlyingObject, b int) bool {
 	}
 	si := e.rollDice(1, 6, 0)
 	for k := 0; k < 6; k++ {
-		if e.charStatus(si%6, 3) && e.charSaveHalf(si%6, 1) == 0 {
-			e.damageChar(si%6, 100)
-			e.printMessage(sprintfC(e.X.Str(dsStrDisint), e.Chars[si%6].NameStr()))
+		if e.charStatus(si, 3) && e.charSaveHalf(si, 1) == 0 { // si==6 probes the phantom char (always fails)
+			e.damageChar(si, 100)
+			e.printMessage(sprintfC(e.X.Str(dsStrDisint), e.Chars[si].NameStr()))
 			break
 		}
 		si++
@@ -718,7 +718,7 @@ func (e *Engine) spFear() {
 		if e.monsterMagicResist(i) {
 			continue
 		}
-		if e.rollDice(1, 20, 0) < e.savingThrowValue(0, e.mprop(m, 2), 4) {
+		if e.rollDice(1, 20, 0) < e.savingThrowValue(0, int(int8(e.mprop(m, 2))), 4) {
 			e.monsterFlee(m)
 		}
 	}

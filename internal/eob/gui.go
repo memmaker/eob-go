@@ -49,6 +49,18 @@ const (
 
 // charStatus ports S0d1c_0670.
 func (e *Engine) charStatus(c, mask int) bool {
+	if c == 6 {
+		// Original bug: callers probe char 6, one past ds:f580's six chars.
+		// Its Flags (+1) is ds:fb33, the high byte of stepsUntilScriptCall;
+		// its HP byte (+0x1b) is ds:fb4d, filled from INF+0x12 (O210c_082f).
+		flags := byte(e.StepsUntilScript >> 8)
+		hp := 0
+		if len(e.LevelINF) > 0x12 {
+			hp = int(int8(e.LevelINF[0x12]))
+		}
+		return (mask&1 == 0 || flags&1 != 0) && (mask&2 == 0 || hp > -10) &&
+			(mask&4 == 0 || hp > 0) && (mask&8 == 0 || flags&4 == 0) && (mask&0x10 == 0 || flags&2 == 0)
+	}
 	ch := &e.Chars[c]
 	ok := true
 	if mask&1 != 0 {

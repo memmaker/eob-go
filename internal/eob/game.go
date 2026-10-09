@@ -23,8 +23,8 @@ func (e *Engine) initHandlers() {
 		cbAddr(0x0acd, 0x01c0): func(a int, _ Event) bool { e.clickedInvSlot(a); return true }, // ports S0acd_01c0 (mouse hide/show is host-side)
 		cbAddr(0x0acd, 0x01e3): func(int, Event) bool { e.closeInventory(); return true },
 		cbAddr(0x0acd, 0x018e): func(int, Event) bool { e.toggleCharInfo(); return true },
-		cbAddr(0x0acd, 0x008c): func(int, Event) bool { e.invNextChar(-1); return true },
-		cbAddr(0x0acd, 0x00eb): func(int, Event) bool { e.invNextChar(1); return true },
+		cbAddr(0x0acd, 0x008c): func(a int, _ Event) bool { e.invNextChar(-1, a); return true },
+		cbAddr(0x0acd, 0x00eb): func(a int, _ Event) bool { e.invNextChar(1, a); return true },
 		cbAddr(0x0ef3, 0x25bd): func(a int, _ Event) bool { e.spellbookTab(a); return true },
 		cbAddr(0x0ef3, 0x2929): func(a int, ev Event) bool { e.spellbookRow(a, ev); return true },
 		cbAddr(0x0ef3, 0x08cf): func(a int, _ Event) bool { e.spellTargetClicked(a); return true },
@@ -263,13 +263,13 @@ func (e *Engine) Run(savePath string) (err error) {
 			}
 			e.processTimers()
 		}
-		e.ambientSound()
-		e.playSoundUpdate(0) // S0acd_0e8a flushes the queued sound each loop
-		e.turnUndeadAuto()
-		if e.sceneUpdate {
+		if e.sceneUpdate { // S0acd_0e8a order: timers, scene, ambient, sound, turn undead
 			e.DrawScene(true)
 			e.sceneUpdate = false
 		}
+		e.ambientSound()
+		e.playSoundUpdate(0) // S0acd_0e8a flushes the queued sound each loop
+		e.turnUndeadAuto()
 		e.present()
 		e.Sys.Sleep(16)
 	}
