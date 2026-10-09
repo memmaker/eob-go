@@ -125,7 +125,7 @@ func (e *Engine) drawInvSlot(slot int, frame bool, page int) {
 			if n < 10 {
 				nx = 0xe9
 			}
-			e.printText(itoa(n), nx, 0x41, 0xf, 0)
+			e.printInt(n, nx, 0x41, 0xf, 0)
 		}
 		if e.KbdMode && e.kbdSlot == slot {
 			e.Scr.DrawRect(page, x-1, y-1, x+sz, y+sz, 0xf)
@@ -184,7 +184,7 @@ func (e *Engine) drawStats(c int) {
 	e.printText(str, 0x113, 0x52, 0xf, e.col.Text)
 	vals := []int8{ch.IntCur, ch.WisCur, ch.DexCur, ch.ConCur, ch.ChaCur, ch.AC}
 	for i, v := range vals {
-		e.printText(itoa(int(v)), 0x113, 0x59+i*7, 0xf, e.col.Text)
+		e.printInt(int(v), 0x113, 0x59+i*7, 0xf, e.col.Text)
 	}
 	for i := 0; i < 3; i++ {
 		p := int(int8(e.X.U8(dsClassParts + int(ch.Class)*4 + i)))
@@ -194,7 +194,7 @@ func (e *Engine) drawStats(c int) {
 		y := 0x91 + i*7
 		e.printText(e.farStr(dsClassPartNm+p*4), 0xb7, y, 0xc, e.col.Text)
 		ex := fmt.Sprint(ch.Experience[i])
-		e.printText(ex, 0xf7-len(ex)*3, y, 0xf, e.col.Text)
+		e.printLong(int(ch.Experience[i]), 0xf7-len(ex)*3, y, 0xf, e.col.Text)
 		lv := itoa(int(ch.Level[i]))
 		e.printText(lv, 0x11e-len(lv)*3, y, 0xf, e.col.Text)
 	}
@@ -210,7 +210,8 @@ func (e *Engine) toggleCharInfo() {
 	e.drawInvPanel(e.InvChar)
 }
 
-// openInventory ports S0acd_0034 (portrait click).
+// openInventory ports S0acd_0034 (portrait click); the save+redraw is
+// the inlined S0bd2_0abe: ports S0bd2_0abe.
 func (e *Engine) openInventory(c int) {
 	if !e.charStatus(c, 1) {
 		return
@@ -221,8 +222,9 @@ func (e *Engine) openInventory(c int) {
 	e.drawInvPanel(c)
 }
 
-// closeInventory restores the party panel (S0acd_01e3 equivalent).
+// closeInventory ports S0acd_01e3: restores the party panel.
 func (e *Engine) closeInventory() {
+	e.kbdSlot = 0
 	e.GuiMode = 0
 	e.Scr.CopyRegion(176, 0, 176, 0, 144, 168, 13, 0)
 	e.DrawPlayfield()
@@ -304,3 +306,9 @@ func (e *Engine) invNextChar(d int) {
 	}
 	e.drawInvPanel(e.InvChar)
 }
+
+// printInt ports S1aa6_000f: itoa(v, 10) into a local buffer, then [0x80ca] printText.
+func (e *Engine) printInt(v, x, y int, fg, bg byte) { e.printText(itoa(v), x, y, fg, bg) }
+
+// printLong ports S1ba4_000c: ltoa(v, 10) then [0x80ca] printText.
+func (e *Engine) printLong(v, x, y int, fg, bg byte) { e.printText(itoa(v), x, y, fg, bg) }

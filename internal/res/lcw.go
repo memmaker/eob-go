@@ -7,6 +7,7 @@ import (
 )
 
 // LCW decompresses Westwood "format 80" data into a buffer of size n.
+// LCW ports S1d9a_0013 (CPS compression type 4).
 func LCW(src []byte, n int) []byte {
 	dst := make([]byte, n)
 	s, d := 0, 0
@@ -78,6 +79,8 @@ type CPS struct {
 }
 
 // DecodeCPS decodes a CPS-container file (also used for CMP, VCN, VMP, INF...).
+// DecodeCPS ports S1b82_00c7 for types 0 (copy) and 4 (LCW); types 1-3
+// (RLE/LZW12/LZW14) occur in no shipped file and are rejected.
 func DecodeCPS(b []byte) (*CPS, error) {
 	if len(b) < 10 {
 		return nil, fmt.Errorf("cps too short")

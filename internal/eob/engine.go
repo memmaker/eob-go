@@ -233,9 +233,12 @@ func New(dir string, sys System) (*Engine, error) {
 }
 
 // ReadFile reads a game file (loose or from PAKs).
+// ReadFile ports S1b82_0009 (open, read whole file into buffer, close).
 func (e *Engine) ReadFile(name string) ([]byte, error) { return e.FS.Read(name) }
 
 // LoadCPS decodes a CPS/CMP file into a page (and returns its palette, if any).
+// LoadCPS ports S082c_051b S082c_05ec (VGA path: "%s.CPS"; EGA ext unused).
+// LoadCPS ports S1b82_0041: read header + data, then S1b82_00c7 decompress.
 func (e *Engine) LoadCPS(name string, page int) ([]byte, error) {
 	if !strings.Contains(name, ".") {
 		name += ".CPS"

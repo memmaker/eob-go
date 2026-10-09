@@ -47,7 +47,7 @@ All game assets, tables and text are read from the original files at runtime (EO
 ## 4. GUI / playfield
 - [x] Playfield layout (PLAYFLD.CPS), character portrait boxes
 - [x] Portraits, names, HP (bar graphs / numbers), hands, status overlays (S1547_0991 all modes, 028c/033f/04a0/0544/0642/07e7; keyboard-slot highlight ds:f51a never set)
-- [x] Text window: S1de7_060a/03b2/0009/00b6/0344/02fe (control codes 02/06/09/0d/13, 0x80 end, pixel word wrap, scroll); overflow hook [0x8117] (ending MORE) not wired; 00c9/025e/05df uncalled
+- [x] Text window: S1de7_060a/03b2/0009/00b6/0344/02fe (control codes 02/06/09/0d/13, 0x80 end, pixel word wrap, scroll); overflow hook [0x8117] = O211e MORE (seqMore, wired); 00c9/025e/05df uncalled (exempt)
 - [x] Mouse cursor with held item
 - [x] Movement / turn buttons, keyboard controls
 - [x] Inventory screen (INVENT.CPS), equip rules, food, eating
@@ -100,7 +100,7 @@ All game assets, tables and text are read from the original files at runtime (EO
 - [x] Play through level 1 to level 2 (TestPlaythroughLevel1: headless bot through Run — levers, door buttons, pressure plates, fights, stairs)
 - [ ] Full playthrough to the ending
 - [x] Level sweep: every enterable block of levels 1-12 entered through Run (TestLevelSweep; answers NPC dialogue, returns from stairs to a script-free block)
-- [ ] Ghidra parity review (tools/ghidra_setup.py, .claude/skills/ghidra): scene drawing done — fixed R(7)/L(11) y, level filter for far-edge walls 0x17/0x18 (O2116_0a4a), flying-object flip by CurPos, rest suppresses scene refresh (ds:f442), palette blit order. Combat done (combat.go + monsters.go) — refillHand belt type test, damageChar byte wrap / signed compare, savingThrowEffect always unique timer, clearCharEvent rebuilds char timers. Script interpreter done — 0xf3 ring-3 skip + discarded roll, 0xf5 operand length, 0xe8 kbdFloorPos, 0xfa placeMonster sub-position (original bug kept), 0xfb signed operands. All remaining files reviewed (magic, camp/rest, chargen/save, sequences, items/inventory, game/gui/timers); INTRO.EXE parts and a few junk-decompile spell FX routines (spellObjectExplode, explodeFx, sparkleFrame, spellSparkle, wandSparkle) still unchecked. Open: Detect Magic glow (refreshCursor stub)
+- [ ] Ghidra parity review (S1aa6-S1e8b accounted: 7 tagged, 30 exempt) (tools/ghidra_setup.py, .claude/skills/ghidra): scene drawing done — fixed R(7)/L(11) y, level filter for far-edge walls 0x17/0x18 (O2116_0a4a), flying-object flip by CurPos, rest suppresses scene refresh (ds:f442), palette blit order. Combat done (combat.go + monsters.go) — refillHand belt type test, damageChar byte wrap / signed compare, savingThrowEffect always unique timer, clearCharEvent rebuilds char timers. Script interpreter done — 0xf3 ring-3 skip + discarded roll, 0xf5 operand length, 0xe8 kbdFloorPos, 0xfa placeMonster sub-position (original bug kept), 0xfb signed operands. All remaining files reviewed (magic, camp/rest, chargen/save, sequences, items/inventory, game/gui/timers); INTRO.EXE parts and a few junk-decompile spell FX routines (spellObjectExplode, explodeFx, sparkleFrame, spellSparkle, wandSparkle) still unchecked. Open: Detect Magic glow (refreshCursor stub)
 
 ## 11. Extensions (not in the original)
 - [x] Turn-based mode (Space, "TURN" badge; moves, attacks, casts, throws, wall/floor clicks, equipping cost a turn)
