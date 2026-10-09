@@ -94,7 +94,10 @@ func (e *Engine) cgButtons(first, n int) []Button {
 }
 
 // cgInput ports O20f6_00f7 (S16a5_005a + button list): 0x8000|id for an
-// activated button, else the raw key code (0 if none).
+// activated button, else the raw key code (0 if none). The original first
+// tests byte 0000:03a0 (low byte of the int E8h vector) for 1 and then clears
+// it and plays sound 0x14; EOB never writes it and DOS/DOSBox-X leave it 0,
+// so that branch never runs and is not ported.
 func (e *Engine) cgInput(btns []Button) int {
 	e.present()
 	e.Sys.Sleep(16)
@@ -954,8 +957,9 @@ func (e *Engine) cgGiveItems() {
 		for i := 0; i < 4; i++ {
 			k := int(e.X.I8(dsCgClsItem + int(ch.Class)*4 + i))
 			it, si := e.i16(dsCgItems+k*4), e.i16(dsCgItems+k*4+2)
-			// ponytail: k == -1 makes the original read the item table tail
-			// (item 511, slot 0); guarded here as "no item".
+			// k == -1 reads ds:60d1 (item 511, slot 0) in the original, but every
+			// class fills slot 0 first, so the slot check skips it there too
+			// (TestCgClassItemTail); the guard only avoids indexing item 511.
 			if it == -1 || it >= len(e.Items) {
 				continue
 			}

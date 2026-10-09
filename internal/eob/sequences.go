@@ -643,6 +643,12 @@ func (e *Engine) dissolve(x, y, w, h, src, dst int) {
 		py[i], py[j] = py[j], py[i]
 	}
 	s, d := e.Scr.Pages[src], e.Scr.Pages[dst]
+	// The original has no delay: its speed is the CPU's. Each pixel costs
+	// ~120 instructions (36 in the loop + 42 in each of driver entries 11
+	// and 22, getPixel/putPixel), paced here at the bundled dosbox_eob1.conf
+	// cycles=auto rate for real mode (3000 cycles/ms).
+	const pixelCycles, cyclesPerMs = 120, 3000
+	slept := 0
 	for r := 0; r < h; r++ {
 		k := r
 		for i := 0; i < w; i++ {
@@ -653,7 +659,9 @@ func (e *Engine) dissolve(x, y, w, h, src, dst int) {
 			}
 		}
 		e.present()
-		e.Sys.Sleep(4)
+		t := (r + 1) * w * pixelCycles / cyclesPerMs
+		e.Sys.Sleep(t - slept)
+		slept = t
 	}
 }
 

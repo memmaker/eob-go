@@ -182,6 +182,20 @@ func (e *Engine) findFreeSubPos(m *Monster, block int) int {
 	return -1
 }
 
+// wallFlagsSigned reads wllWallFlags (ds:194b) the way S08e6_0309 does: the
+// wall byte is sign-extended (cwde), so ids 128-255 read ds:18cb-194a, i.e.
+// the tail of wllShapeMap (ds:18bf) and specialWallTypes (ds:1905).
+func (e *Engine) wallFlagsSigned(w byte) byte {
+	if w < 0x80 {
+		return e.WllWallFlags[w]
+	}
+	if a := 0x194b + int(w) - 256; a < 0x1905 {
+		return e.WllShapeMap[a-0x18bf]
+	} else {
+		return e.SpecialWallTypes[a-0x1905]
+	}
+}
+
 // moveMonster ports S08e6_0309.
 func (e *Engine) moveMonster(m *Monster, block, dir int) bool {
 	old := int(m.Block)
@@ -191,7 +205,7 @@ func (e *Engine) moveMonster(m *Monster, block, dir int) bool {
 	if dir == -1 {
 		dir = int(m.Dir)
 	}
-	if e.WllWallFlags[e.Blocks[block].Walls[dir^2]]&4 == 0 {
+	if e.wallFlagsSigned(e.Blocks[block].Walls[dir^2])&4 == 0 {
 		return false
 	}
 	if block == e.CurrentBlock {
