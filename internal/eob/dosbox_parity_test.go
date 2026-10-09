@@ -31,6 +31,12 @@ func TestDOSBoxSaveParity(t *testing.T) {
 		{"orig_prefs_mouse.SAV", []int{KeyEnter, w, w, click(299, 186, 1), w, w, click(80, 95, 1), w, w,
 			click(80, 61, 1), w, w, click(80, 44, 1), w, w, click(148, 128, 1), w, w, click(80, 112, 1), w, w,
 			click(80, 44, 1), w, w, click(32, 63, 1), w, w}},
+		// load game, then by mouse: Aldric's inventory, scroll to an empty
+		// backpack slot, sword from hand to backpack, close, camp, Game
+		// Options, Save Game, Yes
+		{"orig_inventory_mouse.SAV", []int{KeyEnter, w, w, click(200, 30, 1), w, w, click(188, 47, 1), w, w,
+			click(188, 100, 1), w, w, click(238, 122, 1), w, w, click(207, 100, 1), w, w, click(310, 157, 1), w, w,
+			click(299, 186, 1), w, w, click(80, 112, 1), w, w, click(80, 44, 1), w, w, click(32, 63, 1), w, w}},
 	}
 	for _, c := range cases {
 		t.Run(c.ref, func(t *testing.T) {
