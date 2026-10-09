@@ -97,6 +97,14 @@ func (e *Engine) clickedFloor(area, button int) {
 	pos := e.u8(dsFloorItemPos + e.CurrentDirection*4 + area)
 	if e.HandItem == 0 {
 		it := e.unlinkItem(blk, pos, -1)
+		if it == 0 && area < 2 {
+			// Extension: also take from the own-block quadrant behind the camera, same side.
+			for p := 0; p < 4 && it == 0; p++ {
+				if int(e.T.ItemPosIndex[e.CurrentDirection*4+p]) == area+2 {
+					it = e.unlinkItem(blk, p, -1)
+				}
+			}
+		}
 		if it == 0 {
 			return
 		}

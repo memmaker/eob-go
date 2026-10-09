@@ -394,6 +394,9 @@ func (e *Engine) drawBlockItems(index int, head int) {
 		dimSet := -1
 		if onWall || it.Pos < 4 {
 			p := int(e.T.ItemPosIndex[e.CurrentDirection*4+int(it.Pos)&3])
+			if index == 16 && p >= 2 {
+				p -= 2 // extension: show own-block items behind the camera in front, same side
+			}
 			if onWall {
 				p = 4
 			}
