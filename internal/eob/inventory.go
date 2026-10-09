@@ -51,8 +51,7 @@ func (e *Engine) drawInvPanel(c int) {
 	if ch.Flags&6 != 0 {
 		fg2 = 6
 	}
-	e.Scr.CopyRegion(176, 0, 0, 0, 144, 168, 2, 14) // backup clean panel
-	old := e.drawPage
+	e.Scr.CopyRegion(176, 0, 0, 0, 144, 168, 2, 2) // backup clean panel to page 2 x=0
 	e.drawPage = 2
 	e.drawPortrait(c)
 	e.printShadow(ch.NameStr(), 0xdb, 6, fg2, e.col.BoxFill)
@@ -80,9 +79,9 @@ func (e *Engine) drawInvPanel(c int) {
 	} else {
 		e.drawStats(c)
 	}
-	e.drawPage = old
+	e.drawPage = 0 // the original forces ds:8115=0, not the caller's page
 	e.Scr.CopyRegion(176, 0, 176, 0, 144, 168, 2, 0)
-	e.Scr.CopyRegion(0, 0, 176, 0, 144, 168, 14, 2) // restore clean panel
+	e.Scr.CopyRegion(0, 0, 176, 0, 144, 168, 2, 2) // restore clean panel
 }
 
 // drawFood ports S1547_04a0.

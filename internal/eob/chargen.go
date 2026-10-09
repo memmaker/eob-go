@@ -189,7 +189,7 @@ func (e *Engine) cgPrintName(c, n int, col byte) {
 	defer e.setFont(e.setFont(e.font6))
 	x, y := e.i16(dsCgNameX+c*2), e.i16(dsCgNameY+c*2)
 	e.printText(e.X.Str(0x618c), x, y, 0xc, 0xc)
-	e.printText(e.Chars[c].NameStr(), x+(0x3c-e.font.W*n)/2, y, col, 0)
+	e.printText(e.Chars[c].NameStr(), x+(0x3c-e.font.W*n)>>1, y, col, 0)
 }
 
 // strengthStr ports S0a72_0468.
@@ -413,10 +413,10 @@ func (e *Engine) cgModifyStat(si int, val, ext *int8) int {
 			di++
 			di %= 7
 			changed = true
-		case KeyEqual, KeyKP6, KeyKPSub, 0x8008: // the original swaps keypad +/-
+		case KeyEqual, KeyKP6, KeyKPAdd, 0x8008: // key table cs:1aa9
 			e.cgPress(0xa)
 			v++
-		case KeyMinus, KeyKP4, KeyKPAdd, 0x8009:
+		case KeyMinus, KeyKP4, KeyKPSub, 0x8009:
 			e.cgPress(0xb)
 			v--
 		case KeyKP5, KeyEsc, 0x800a:
@@ -455,7 +455,8 @@ func (e *Engine) cgModifyStat(si int, val, ext *int8) int {
 			if v < 18 || e.cg.max[0] < 19 {
 				exv = 0
 			}
-			*ext = int8(min(exv, 100))
+			exv = min(exv, 100) // clamps local_8 itself
+			*ext = int8(exv)
 		}
 		if si == 6 {
 			ch.HPMax = int8(v)
