@@ -336,7 +336,7 @@ func (e *Engine) present() {
 	}
 	if e.bigOpen {
 		e.drawBigMap(15)
-	} else if e.MiniMap && e.inGame && e.GuiMode == 0 {
+	} else if e.MiniMap && e.inGame && e.GuiMode == 0 && !e.poiEdit {
 		e.drawMiniMap(15)
 	}
 	if e.TurnBased && !e.bigOpen { // turn-mode badge, top left of the 3D view; grey while a turn plays out

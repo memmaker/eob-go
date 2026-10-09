@@ -43,7 +43,7 @@ func (e *Engine) drawBigMap(p int) {
 		e.printShadow(l, 208, 160+i*10, 0xf, 0)
 	}
 	mx, my := e.Sys.Mouse()
-	if l, ok := e.pois[e.CurrentLevel][e.bigMapCell(mx, my)]; ok {
+	if l, ok := e.pois[e.CurrentLevel][e.bigMapCell(mx, my)]; ok && !e.poiEdit {
 		e.printShadow(l, 208, 40, e.miniPOI, 0)
 	}
 }
@@ -77,8 +77,8 @@ func (e *Engine) editPOI(blk int) {
 	buf := make([]byte, bigMax+1)
 	copy(buf, e.pois[e.CurrentLevel][blk])
 	e.Scr.CopyPage(0, 14) // the line editor draws on page 0: show the map there meanwhile
-	e.bigOpen = false
-	defer func() { e.Scr.CopyPage(14, 0); e.bigOpen = true }()
+	e.bigOpen, e.poiEdit = false, true
+	defer func() { e.Scr.CopyPage(14, 0); e.bigOpen, e.poiEdit = true, false }()
 	e.drawBigMap(0)
 	defer e.setFont(e.setFont(e.font8))
 	e.printShadow("LABEL:", 208, 40, 0xf, 0)

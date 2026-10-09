@@ -220,6 +220,7 @@ type Engine struct {
 	mazeWalls                map[int]*[1024][4]byte     // level -> walls as in LEVELn.MAZ
 	switches                 map[int]map[int]*switchUse // level -> switch / plate block -> use
 	bigOpen                  bool                       // full-screen map shown over the running game
+	poiEdit                  bool                       // a map label is being edited (page 0 shows the map)
 	autoSpots                map[int]int                // auto-walk: drawn blocks with monsters / items
 }
 
