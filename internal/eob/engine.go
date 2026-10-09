@@ -158,6 +158,9 @@ type Engine struct {
 	tickOfs                uint32   // game time skipped by resting
 	menuItems              []string // menuCustom items
 	MiniMap                bool     // Tab: minimap overlay (extension)
+	padX, padY             int      // cursor at the last gamepad press (pad.go)
+	padNav                 bool     // D-pad drives the menu highlight
+	padClick               [3]bool  // A/B pressed as a click: release as one
 	attackNext             int      // front-row character the F key attacks with next (extension)
 	miniLvl                int      // level the minimap colours below were taken from
 	miniFloor, miniWall    byte     // average floor / wall texture colours

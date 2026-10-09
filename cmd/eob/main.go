@@ -128,7 +128,7 @@ var helpText = []string{
 	"Pad: stick cursor, A/B click,",
 	" D-pad move/turn, LB/RB strafe,",
 	" X attack, L3 turn mode, Y map,",
-	" Start camp",
+	" Start camp. Menus: D-pad, A ok, B back",
 }
 
 // extAscii holds the characters the original keyboard driver reports for
@@ -144,17 +144,18 @@ type game struct {
 
 // padKeys maps standard-layout gamepad buttons to game keys (extension).
 var padKeys = map[ebiten.StandardGamepadButton]int{
-	ebiten.StandardGamepadButtonLeftTop: eob.KeyKP8, ebiten.StandardGamepadButtonLeftBottom: eob.KeyKP2,
-	ebiten.StandardGamepadButtonLeftLeft: eob.KeyKP7, ebiten.StandardGamepadButtonLeftRight: eob.KeyKP9,
 	ebiten.StandardGamepadButtonFrontTopLeft: eob.KeyKP4, ebiten.StandardGamepadButtonFrontTopRight: eob.KeyKP6,
 	ebiten.StandardGamepadButtonRightLeft: eob.KeyAttack, ebiten.StandardGamepadButtonLeftStick: eob.KeySpace, ebiten.StandardGamepadButtonRightTop: eob.KeyTab,
 	ebiten.StandardGamepadButtonCenterRight: 48, // camp
 	ebiten.StandardGamepadButtonRightStick:  eob.KeyEsc,
 }
 
-// padButtons maps gamepad buttons to mouse buttons at the cursor.
+// padButtons are reported as pad events at the cursor; the engine makes them
+// clicks / movement in the 3D view and confirm / cancel / navigation in menus.
 var padButtons = map[ebiten.StandardGamepadButton]int{
-	ebiten.StandardGamepadButtonRightBottom: 1, ebiten.StandardGamepadButtonRightRight: 2,
+	ebiten.StandardGamepadButtonRightBottom: eob.PadA, ebiten.StandardGamepadButtonRightRight: eob.PadB,
+	ebiten.StandardGamepadButtonLeftTop: eob.PadUp, ebiten.StandardGamepadButtonLeftBottom: eob.PadDown,
+	ebiten.StandardGamepadButtonLeftLeft: eob.PadLeft, ebiten.StandardGamepadButtonLeftRight: eob.PadRight,
 }
 
 func (g *game) Update() error {
@@ -228,10 +229,10 @@ func (g *game) Update() error {
 				continue
 			}
 			if inpututil.IsStandardGamepadButtonJustPressed(id, b) {
-				p.events = append(p.events, eob.Event{Kind: eob.EvMouseDown, Button: n, X: mx, Y: my})
+				p.events = append(p.events, eob.Event{Kind: eob.EvPadDown, Key: n, X: mx, Y: my})
 			}
 			if inpututil.IsStandardGamepadButtonJustReleased(id, b) {
-				p.events = append(p.events, eob.Event{Kind: eob.EvMouseUp, Button: n, X: mx, Y: my})
+				p.events = append(p.events, eob.Event{Kind: eob.EvPadUp, Key: n, X: mx, Y: my})
 			}
 		}
 	}

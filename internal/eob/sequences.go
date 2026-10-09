@@ -37,7 +37,7 @@ func (e *Engine) seqLabels(o, n int) []string {
 // screen and returns a key code, 0x41/0x42 for mouse clicks (with position),
 // 0 for nothing and -1 when the window was closed.
 func (e *Engine) seqPoll() (int, int, int) {
-	ev, ok := e.Sys.PollEvent()
+	ev, ok := e.poll()
 	if !ok {
 		e.present()
 		e.Sys.Sleep(16)
@@ -178,7 +178,7 @@ func (e *Engine) seqChoice(start, count int, labels []string) int {
 			drawn = sel
 		}
 		k, cx, cy := e.seqPoll()
-		if i := hit(e.Sys.Mouse()); i >= 0 {
+		if i := hit(e.mouse()); i >= 0 {
 			sel = i
 		}
 		switch k {

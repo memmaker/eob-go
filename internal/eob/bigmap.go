@@ -52,7 +52,7 @@ func (e *Engine) bigMap() {
 		e.present()
 		e.Sys.Sleep(16)
 		for {
-			ev, ok := e.Sys.PollEvent()
+			ev, ok := e.poll()
 			if !ok {
 				break
 			}

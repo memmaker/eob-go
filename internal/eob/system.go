@@ -11,6 +11,8 @@ const (
 	EvQuit
 	EvMouseMove
 	EvDebugGoto // X=block, Y=dir (testing aid)
+	EvPadDown   // Key=Pad*, X/Y=cursor (see pad.go)
+	EvPadUp
 )
 
 // Event is an input event delivered by the platform layer.

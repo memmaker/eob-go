@@ -170,7 +170,7 @@ func (e *Engine) campPress(b *Button, hl bool) {
 func (e *Engine) campInput() int {
 	e.present()
 	e.Sys.Sleep(16)
-	ev, ok := e.Sys.PollEvent()
+	ev, ok := e.poll()
 	if !ok {
 		return 0
 	}
@@ -211,7 +211,7 @@ func (e *Engine) campMessage(i int) {
 	e.present()
 	end := e.Sys.Millis() + 120*tickMillis
 	for e.Sys.Millis() < end && !e.quit {
-		ev, ok := e.Sys.PollEvent()
+		ev, ok := e.poll()
 		if ok && (ev.Kind == EvKeyDown || ev.Kind == EvMouseDown || ev.Kind == EvQuit) {
 			e.quit = e.quit || ev.Kind == EvQuit
 			break
@@ -253,7 +253,7 @@ func (e *Engine) campConfirm(i int) bool {
 			continue
 		default:
 			if !e.KbdMode {
-				mx, my := e.Sys.Mouse()
+				mx, my := e.mouse()
 				for _, b := range e.camp.btns {
 					if b.Arg&2 != 0 && inRect(mx, my, b.X, b.Y, b.X+b.W, b.Y+b.H) {
 						cur = b.ID - 0x21
@@ -647,7 +647,7 @@ func (e *Engine) memorize(c int, pray bool) {
 		case KeyEsc:
 			k = 0x801a
 		default:
-			mx, my := e.Sys.Mouse()
+			mx, my := e.mouse()
 			if !e.KbdMode && inRect(mx, my, 8, 0x32, 0xa8, 0x7a) {
 				hl = min((my-0x32)/9, n-1)
 			}
@@ -779,7 +779,7 @@ func (e *Engine) scribeScrolls() {
 			e.printText(e.farStr(dsMageNames+list[di]*4), 8, 0x32+di*9, 6, 0)
 		}
 		k := e.campInput()
-		mx, my := e.Sys.Mouse()
+		mx, my := e.mouse()
 		if k == 0 && inRect(mx, my, 8, 0x32, 0xb0, 0x31+len(list)*9) {
 			di = (my - 0x32) / 9
 		}
@@ -1037,7 +1037,7 @@ func (e *Engine) openCamp() {
 			}
 		default:
 			if !e.KbdMode {
-				mx, my := e.Sys.Mouse()
+				mx, my := e.mouse()
 				for _, b := range e.camp.btns {
 					if b.Arg&2 != 0 && inRect(mx, my, b.X, b.Y, b.X+b.W, b.Y+b.H) {
 						want = b.ID

@@ -101,7 +101,7 @@ func (e *Engine) cgButtons(first, n int) []Button {
 func (e *Engine) cgInput(btns []Button) int {
 	e.present()
 	e.Sys.Sleep(16)
-	ev, ok := e.Sys.PollEvent()
+	ev, ok := e.poll()
 	if !ok {
 		return 0
 	}
@@ -709,10 +709,10 @@ func (e *Engine) cgSelect(m, title, strs int, mask uint32, n, backX int, escBack
 	for {
 		e.cgBlink()
 		if !escBack { // 207a: while the mouse rests on Back, input is read and dropped; a click goes back
-			if mx, my := e.Sys.Mouse(); inBox(mx, my, backX, 0xab, 0x12f, 0xbb) {
+			if mx, my := e.mouse(); inBox(mx, my, backX, 0xab, 0x12f, 0xbb) {
 				e.present()
 				e.Sys.Sleep(16)
-				if ev, ok := e.Sys.PollEvent(); ok {
+				if ev, ok := e.poll(); ok {
 					if ev.Kind == EvQuit {
 						panic(errQuit)
 					}
@@ -789,7 +789,7 @@ func (e *Engine) inputString(buf []byte, x8, y, maxLen int, fg, bg, cur byte) in
 		for si == 0 {
 			e.present()
 			e.Sys.Sleep(16)
-			ev, ok := e.Sys.PollEvent()
+			ev, ok := e.poll()
 			switch {
 			case !ok:
 			case ev.Kind == EvQuit:

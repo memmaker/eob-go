@@ -295,7 +295,7 @@ func (e *Engine) restUnlearned() bool {
 // restKeyPressed ports the S1aad_038e checks (any key or click aborts).
 func (e *Engine) restKeyPressed() bool {
 	e.present()
-	ev, ok := e.Sys.PollEvent()
+	ev, ok := e.poll()
 	if ok && ev.Kind == EvQuit {
 		e.quit = true
 	}

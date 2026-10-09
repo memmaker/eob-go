@@ -100,11 +100,11 @@ func (e *Engine) pollMenu(m, strs int, mask uint32, bit int) int {
 	e.menuKey = 0
 	e.present()
 	e.Sys.Sleep(16)
-	mx, my := e.Sys.Mouse()
+	mx, my := e.mouse()
 	if !e.KbdMode && inBox(mx, my, x, y1, x2, y2) {
 		cur = (my - y1) / rowH
 	}
-	if ev, ok := e.Sys.PollEvent(); ok {
+	if ev, ok := e.poll(); ok {
 		switch ev.Kind {
 		case EvQuit:
 			panic(errQuit)
@@ -212,7 +212,7 @@ func (e *Engine) waitInput() {
 	for {
 		e.present()
 		e.Sys.Sleep(16)
-		ev, ok := e.Sys.PollEvent()
+		ev, ok := e.poll()
 		if !ok {
 			continue
 		}

@@ -113,7 +113,7 @@ func (in *intro) wait() {
 	in.present()
 	for in.e.Sys.Millis() < in.deadline {
 		for {
-			ev, ok := in.e.Sys.PollEvent()
+			ev, ok := in.e.poll()
 			if !ok {
 				break
 			}

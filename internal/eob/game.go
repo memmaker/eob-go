@@ -86,7 +86,7 @@ func (e *Engine) cantGo() {
 // flushInput ports S1aad_0480: drops the pending input queue (a quit is kept).
 func (e *Engine) flushInput() {
 	for {
-		ev, ok := e.Sys.PollEvent()
+		ev, ok := e.poll()
 		if !ok {
 			return
 		}
@@ -229,7 +229,7 @@ func (e *Engine) Run(savePath string) (err error) {
 	e.ambientNext = e.ticks + uint32(e.rollDice(1, 10, 3)*18)
 	for !e.quit {
 		for {
-			ev, ok := e.Sys.PollEvent()
+			ev, ok := e.pollGame()
 			if !ok {
 				break
 			}
