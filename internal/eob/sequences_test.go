@@ -20,6 +20,9 @@ func (s *keySys) PollEvent() (Event, bool) {
 	}
 	k := s.keys[0]
 	s.keys = s.keys[1:]
+	if k == 0 { // idle poll: stands in for a pause between keys
+		return Event{}, false
+	}
 	return Event{Kind: EvKeyDown, Key: k}, true
 }
 func (s *keySys) Mouse() (int, int) { return 0, 0 }
