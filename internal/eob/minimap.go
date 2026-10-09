@@ -79,7 +79,7 @@ func (e *Engine) mapColors() {
 	if e.miniLvl != e.CurrentLevel {
 		e.miniLvl = e.CurrentLevel
 		e.miniFloor, e.miniWall = e.vmpColor(8*22, 330, &e.vcn.ColBg, 55), e.vmpColor(330, len(e.vmp), &e.vcn.ColWall, 130)
-		e.miniDoor, e.miniOpenDoor, e.miniPOI = e.nearestColor(8, 16, 63), e.nearestColor(40, 63, 63), e.nearestColor(63, 63, 0)
+		e.miniDoor, e.miniOpenDoor, e.miniPOI = e.nearestColor(24, 36, 63), e.nearestColor(8, 12, 40), e.nearestColor(63, 63, 0)
 	}
 }
 

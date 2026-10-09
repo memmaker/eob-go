@@ -161,7 +161,7 @@ type Engine struct {
 	attackNext             int      // front-row character the F key attacks with next (extension)
 	miniLvl                int      // level the minimap colours below were taken from
 	miniFloor, miniWall    byte     // average floor / wall texture colours
-	miniDoor, miniOpenDoor byte     // blue closed, cyan open doors
+	miniDoor, miniOpenDoor byte     // light blue closed, dark blue open doors
 	miniPOI                byte     // yellow points of interest
 	seen                   map[int]*[1024]bool
 	pois                   map[int]map[int]string // level -> block -> label (extension, M map)
