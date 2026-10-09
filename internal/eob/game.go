@@ -336,8 +336,9 @@ func (e *Engine) ambientSound() {
 // partyAttack (extension) is a right click on a hand of a front-row
 // character, cycling on each press through both primary hands, then both
 // secondary hands. A character who is down or still recovering that hand
-// is passed over; so is a primary spellbook / holy symbol, and a secondary
-// hand without a weapon.
+// is passed over; so is a primary spellbook / holy symbol, a secondary
+// hand without a weapon, and a hand canUseHand refuses (the original only
+// lets the off hand use weapons that need no hand, such as daggers).
 func (e *Engine) partyAttack() {
 	for k := 0; k < 4; k++ {
 		n := e.attackNext
@@ -349,7 +350,7 @@ func (e *Engine) partyAttack() {
 		}
 		it := int(ch.Inventory[hand])
 		p := e.ItemTypes[e.Items[it].Type].ExtraProps & 0x7f
-		if it != 0 && (p == 5 || p == 6) || hand == 1 && (it == 0 || p < 1 || p > 3) {
+		if it != 0 && (p == 5 || p == 6) || hand == 1 && (it == 0 || p < 1 || p > 3) || !e.canUseHand(c, hand) {
 			continue
 		}
 		e.useItem(c, hand)
