@@ -129,7 +129,7 @@ type Engine struct {
 	col                  guiColors
 	ButtonDefs           []Button
 	handlers             map[uint32]func(arg int, ev Event) bool
-	btnKey               int // ds:fc82: 1/2 = button fired by its key/key2, 0 = mouse
+	btnKey               int  // ds:fc82: 1/2 = button fired by its key/key2, 0 = mouse
 	txtCol, txtLine      int  // ds:fe52, fe54
 	txtFg, txtBg         int  // ds:811d, 811b
 	txtDim               int  // ds:811f

@@ -88,6 +88,7 @@ func (e *Engine) flushInput() {
 		}
 		if ev.Kind == EvQuit {
 			e.quit = true
+			return
 		}
 	}
 }

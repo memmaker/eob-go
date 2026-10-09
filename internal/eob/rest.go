@@ -113,6 +113,7 @@ func (e *Engine) restParty() bool {
 	}
 	// original: S1aad_0480, setDim(4); O2102's camp loop later restores the
 	// dim, which Go's camp does not track, so restore it here.
+	e.flushInput()
 	e.setDim(oldDim)
 	e.setFont(e.font8)
 	if injured == 0 && !monsters {

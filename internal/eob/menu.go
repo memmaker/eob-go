@@ -82,8 +82,7 @@ func (e *Engine) drawMenu(m, strs int, mask uint32, bit, gap int) {
 			e.printText(s, x, y+i*rowH, byte(d.UnkC), 0)
 		}
 	}
-	e.present()
-	e.flushInput()
+	e.present() // S1aad_0480 input flush omitted: it would eat scripted/type-ahead menu keys
 }
 
 // pollMenu ports S14ef_0274: handles one input event and returns the chosen
@@ -260,7 +259,7 @@ func (e *Engine) frontEnd() error {
 	}
 	// ports S0acd_0f72 tail (Run adds DrawPlayfield/DrawScene/setDim(7));
 	// ds:dcaa=1 is not modelled (see kbdCommand).
-	e.SpellbookOpen = false // ds:f3b9
+	e.SpellbookOpen = false          // ds:f3b9
 	e.SelectedChar, e.InvChar = 0, 0 // ds:1f3a
 	e.loadPlayfield()
 	return nil

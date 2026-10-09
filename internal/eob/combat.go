@@ -528,6 +528,7 @@ func (e *Engine) checkPartyDead() {
 	e.printMessage(e.X.Str(dsStrPartyDead))
 	e.seqDelay(0x12) // S082c_0b43(1): one second, then any key
 	e.seqWaitAny()
+	e.flushInput()
 	e.gameOver = true
 	e.quit = true
 }

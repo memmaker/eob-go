@@ -182,8 +182,8 @@ func (e *Engine) toggleDoor(block, side int) {
 	e.setTimer(timerDoor, block, dir, true)
 }
 
-// updateBlockIfVisible ports S0d1c_0006 (request redraw).
-func (e *Engine) updateBlockIfVisible(block int) { e.sceneUpdate = true }
+// updateBlockIfVisible is S0d1c_0006 called for its redraw side effect.
+func (e *Engine) updateBlockIfVisible(block int) { e.blockVisible(block) }
 
 // timerFood ports S1414_0c82.
 func (e *Engine) timerFood(int) {

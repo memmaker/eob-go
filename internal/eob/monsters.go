@@ -714,10 +714,12 @@ func (e *Engine) monsterIdleJitter(int) {
 	}
 }
 
-// blockVisible ports S0d1c_0006's visibility test.
+// blockVisible ports S0d1c_0006: block among the first 15 view blocks
+// (ds:a9c8, the party's own row 15-17 excluded); requests a redraw if so.
 func (e *Engine) blockVisible(block int) bool {
-	for i := 0; i < 18; i++ {
+	for i := 0; i < 15; i++ {
 		if (e.CurrentBlock+int(e.T.BlockIndex[e.CurrentDirection*18+i]))&0x3ff == block {
+			e.sceneUpdate = true
 			return true
 		}
 	}

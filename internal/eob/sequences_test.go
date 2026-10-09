@@ -2,10 +2,19 @@ package eob
 
 import "testing"
 
-type keySys struct{ keys []int }
+type keySys struct {
+	keys []int
+	gap  bool
+}
 
 func (s *keySys) Present(pix, pal []byte) {}
+
+// PollEvent reports an empty queue between keys, so a key arrives after the
+// game's input flush (S1aad_0480) instead of as type-ahead it would drop.
 func (s *keySys) PollEvent() (Event, bool) {
+	if s.gap = !s.gap; s.gap {
+		return Event{}, false
+	}
 	if len(s.keys) == 0 {
 		return Event{Kind: EvQuit}, true
 	}

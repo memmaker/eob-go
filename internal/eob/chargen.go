@@ -349,6 +349,7 @@ func (e *Engine) cgModify() {
 	ch := &e.Chars[e.cg.slot]
 	vals := []*int8{&ch.StrCur, &ch.IntCur, &ch.WisCur, &ch.DexCur, &ch.ConCur, &ch.ChaCur, &ch.HPCur}
 	var none int8 // the original passes a null pointer
+	e.flushInput() // O20f6_1ae3
 	e.cgDrawSheet(e.cg.slot, 3)
 	for si := 0; si >= 0 && si <= 6; {
 		ext := &none
@@ -384,6 +385,7 @@ func (e *Engine) cgModifyStat(si int, val, ext *int8) int {
 		e.printShadow(s, b.X+0x20, b.Y, 6, 0)
 	}
 	e.cgDrawSheet(e.cg.slot, 3)
+	e.flushInput() // O20f6_139f
 	draw(0x6227)
 	hpRange := func() {
 		cls, con, l := int(ch.Class), int(ch.ConCur), ch.Level
@@ -565,6 +567,7 @@ func (e *Engine) cgNextFace(si, dir int) int {
 // cgSelectFace ports O20f6_0a5e.
 func (e *Engine) cgSelectFace() {
 	var shown [4]int
+	e.flushInput() // O20f6_0a77
 	btns := e.cgButtons(0x15, 6)
 	start := 0
 	if e.cg.sex != 0 {
@@ -637,6 +640,7 @@ func (e *Engine) cgSelectFace() {
 func (e *Engine) cgStatsScreen() {
 	e.cgSelectFace()
 	btns := e.cgButtons(0x1b, 4)
+	e.flushInput() // O20f6_0e09
 	for {
 		e.cgBlink()
 		redraw := true
@@ -679,6 +683,7 @@ func (e *Engine) cgSelectRace() int {
 	e.cgMenuTitle(0x623f)
 	e.Scr.Dims[menuDimBase+1].Unk8 = 0
 	e.drawMenu(1, dsRaceStrs, 0xffffffff, 0, 0)
+	e.flushInput() // O20f6_1feb
 	for {
 		if r := e.pollMenu(1, dsRaceStrs, 0xffffffff, 0); r != -1 {
 			e.cg.sex = r % 2
@@ -697,6 +702,7 @@ func (e *Engine) cgSelect(m, title, strs int, mask uint32, n, backX int, escBack
 	e.cgMenuTitle(title)
 	e.cgDrawButton(5, 0, 0)
 	e.drawMenu(m, strs, mask, 0, 0)
+	e.flushInput() // O20f6_20f4 / O20f6_2332
 	for {
 		e.cgBlink()
 		if !escBack { // 207a: while the mouse rests on Back, input is read and dropped; a click goes back
@@ -896,6 +902,7 @@ func (e *Engine) cgCreate() {
 // cgView ports O20f6_0ee5: shows existing characters (delete / play).
 func (e *Engine) cgView() bool {
 	btns := e.cgButtons(0, 7)
+	e.flushInput() // O20f6_0f00
 	play, done := false, false
 	e.highlight(-1)
 	e.cgDrawSheet(e.cg.slot, 2)

@@ -113,6 +113,7 @@ func (e *Engine) drawCampMenu(m int) {
 		e.camp.btns = append(e.camp.btns, b)
 		e.drawCampButton(&b, false, false, false)
 	}
+	e.flushInput() // O2102_13e0
 }
 
 // drawCampButton ports O2102_1551.
@@ -217,6 +218,7 @@ func (e *Engine) campMessage(i int) {
 		}
 		e.Sys.Sleep(16)
 	}
+	e.flushInput() // O2102_14da/150b, O212a_0c7e/0caf
 }
 
 // campConfirm ports O2102_243a: Yes/No question, true for Yes.
@@ -277,6 +279,7 @@ func (e *Engine) campSelectChar(msg int) int {
 	if msg == 0x1a {
 		mask = 4
 	}
+	e.flushInput() // O2102_042f
 	e.camp.redraw = false
 	var elig [6]bool
 	n, sel := 0, -1

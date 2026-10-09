@@ -57,6 +57,7 @@ func (e *Engine) seqPoll() (int, int, int) {
 
 // seqWaitAny waits for any key or click (S1aad_0480 + S1aad_05d3).
 func (e *Engine) seqWaitAny() {
+	e.flushInput()
 	for {
 		if k, _, _ := e.seqPoll(); k != 0 {
 			return
@@ -123,6 +124,7 @@ func (e *Engine) seqMore() {
 	}
 	e.Scr.DrawBox3D(0, x1, y1, x2, y2, e.col.BoxHi, e.col.BoxLo, int(e.col.BoxFill))
 	e.Scr.PrintText(e.font, 0, e.X.Str(dsSeqMore), x1+4, y1+2, 0xf, 0)
+	e.flushInput() // O211e_02e2
 	for {
 		k, mx, my := e.seqPoll()
 		if k == KeyEnter || k == 0x34 || k == KeySpace || k < 0 || ((k == 0x41 || k == 0x42) && inRect(mx, my, x1, y1, x2, y2)) {
