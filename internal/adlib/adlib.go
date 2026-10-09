@@ -12,6 +12,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"sync"
+	"time"
 
 	"github.com/felix/goeob/internal/opl"
 )
@@ -78,6 +79,10 @@ type Player struct {
 	cs        []byte // driver code segment image (frequency/pitch-bend tables)
 	freqAt    int    // cs offset of the 12-entry note frequency table
 	bendAt    int    // cs offset of the pitch-bend row pointers
+
+	hold             int // 0000:3b36 in driver ticks (11 interrupts < 1 tick)
+	lastProg         int // ds:5e26: program whose header bytes are altered
+	lastLvl, lastPri uint8
 }
 
 // New parses ADLIB.DAT contents and returns a player rendering at rate Hz.
@@ -85,7 +90,8 @@ func New(file []byte, rate int) (*Player, error) {
 	if len(file) < 120+4*numPrograms {
 		return nil, errors.New("adlib: data too short")
 	}
-	p := &Player{chip: opl.New(rate), ids: file[:120], data: file[120:], rate: rate, rnd: 0x1234}
+	p := &Player{chip: opl.New(rate), ids: file[:120], data: file[120:], rate: rate, rnd: 0x1234,
+		lastLvl: 0xff, lastPri: 0xff} // ds:5e28/5e2a start as 0xffff (5e26 = 0)
 	p.reset()
 	return p, nil
 }
@@ -177,6 +183,59 @@ func (p *Player) Play(id int) {
 	p.PlayProgram(int(p.ids[id]))
 }
 
+// PlayAt ports the AdLib branch of S177d_0106 for one queued sound: id at
+// dist blocks from the party. Sounds 16+ blocks away are dropped. The
+// previous sound's header bytes (+3 first level, +1 priority) are restored
+// once it has started, then this one's are saved and, when dist > 0, its
+// level is attenuated toward 0x3f and its priority lowered to 0x20-dist.
+func (p *Player) PlayAt(id, dist int) {
+	if id < 0 || id >= len(p.ids) || p.ids[id] == 0 || dist >= 16 {
+		return
+	}
+	// The original busy-waits for the driver to count 3b36 down; bounded
+	// here so a player that is not being read (headless) cannot hang.
+	for i := 0; i < 50; i++ {
+		p.mu.Lock()
+		h := p.hold
+		p.mu.Unlock()
+		if h == 0 {
+			break
+		}
+		time.Sleep(time.Millisecond)
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	n := int(p.ids[id]) // ds:5e22 (> 0 tested above)
+	p.setHeader(p.lastProg, 3, p.lastLvl)
+	p.setHeader(p.lastProg, 1, p.lastPri)
+	p.lastProg = n
+	p.lastLvl, p.lastPri = p.header(n, 3), p.header(n, 1)
+	if dist > 0 {
+		l := int(p.lastLvl)
+		p.setHeader(n, 3, uint8(l+(0x3f-l)*(dist-1)>>4))
+		p.setHeader(n, 1, uint8(0x20-dist))
+	}
+	p.startProgram(n)
+	p.hold = 1
+}
+
+// header / setHeader port S0000_03ca / S0000_03b0: byte off of program n.
+func (p *Player) header(n, off int) uint8 {
+	if n < 0 || n >= numPrograms {
+		return 0
+	}
+	return p.u8(p.program(n) + off)
+}
+
+func (p *Player) setHeader(n, off int, v uint8) {
+	if n < 0 || n >= numPrograms {
+		return
+	}
+	if i := p.program(n) + off; i >= 0 && i < len(p.data) {
+		p.data[i] = v
+	}
+}
+
 // PlayProgram starts driver program n directly.
 func (p *Player) PlayProgram(n int) {
 	p.mu.Lock()
@@ -230,6 +289,9 @@ func (p *Player) random() uint16 {
 
 // tick is one driver callback (1/72 s).
 func (p *Player) tick() {
+	if p.hold > 0 { // S0000_3eaf
+		p.hold--
+	}
 	if p.startWait > 0 {
 		p.startWait--
 	}

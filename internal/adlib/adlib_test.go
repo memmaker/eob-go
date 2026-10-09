@@ -79,3 +79,45 @@ func testPlayAll(t *testing.T, name, exeName string) {
 		t.Fatalf("%d sounds silent", silent)
 	}
 }
+
+// PlayAt (AdLib branch of S177d_0106): distance attenuates header bytes +3
+// and +1, the next sound restores them, and 16+ blocks is silent.
+func TestPlayAt(t *testing.T) {
+	fs, err := pak.Open(testDir)
+	if err != nil {
+		t.Skip(err)
+	}
+	d, err := fs.Read("ADLIB.DAT")
+	if err != nil {
+		t.Skip(err)
+	}
+	p, _ := New(d, 22050)
+	id := 0
+	for p.ids[id] == 0 || int(p.ids[id]) >= numPrograms {
+		id++
+	}
+	n := int(p.ids[id])
+	lvl, pri := p.header(n, 3), p.header(n, 1)
+	p0lvl := p.header(0, 3)
+	p.PlayAt(id, 5)
+	wl := uint8(int(lvl) + (0x3f-int(lvl))*4>>4)
+	if p.header(n, 3) != wl || p.header(n, 1) != 0x20-5 {
+		t.Fatalf("dist 5: %#x %#x, want %#x %#x", p.header(n, 3), p.header(n, 1), wl, 0x20-5)
+	}
+	if p.header(0, 3) != 0xff && n != 0 { // first restore writes ds:5e28's 0xffff
+		t.Errorf("program 0 level %#x (was %#x), want 0xff", p.header(0, 3), p0lvl)
+	}
+	p.hold = 0
+	p.PlayAt(id, 0)
+	if p.header(n, 3) != lvl || p.header(n, 1) != pri {
+		t.Fatalf("restore: %#x %#x, want %#x %#x", p.header(n, 3), p.header(n, 1), lvl, pri)
+	}
+	p.hold = 0
+	before := p.lastProg
+	p.lastProg = -1
+	p.PlayAt(id, 16)
+	if p.lastProg != -1 {
+		t.Fatal("dist 16 played")
+	}
+	p.lastProg = before
+}

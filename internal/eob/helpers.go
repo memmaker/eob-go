@@ -271,14 +271,17 @@ func (e *Engine) printColoredMessage(s string, fg, bg byte) {
 }
 
 // playSoundAt ports S177d_0106: plays the previously queued sound, then
-// queues id with its distance from the party. Only the non-AdLib (digital)
-// path scales volume by distance; the AdLib path, ported here, ignores it.
+// queues id with its distance from the party. The AdLib branch (sound
+// driver argument 1, ds:b892 == 0) scales the level and priority by distance
+// (DistSoundPlayer); the speaker branches are not ported.
 func (e *Engine) playSoundAt(id, block int) {
 	if e.Opt80e6 == 0 {
 		return
 	}
 	if e.pendingSound > 0 {
-		if s, ok := e.Sys.(SoundPlayer); ok {
+		if s, ok := e.Sys.(DistSoundPlayer); ok {
+			s.PlaySoundAt(e.pendingSound, e.pendingDist)
+		} else if s, ok := e.Sys.(SoundPlayer); ok {
 			s.PlaySound(e.pendingSound)
 		}
 	}

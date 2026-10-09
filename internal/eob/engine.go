@@ -150,6 +150,7 @@ type Engine struct {
 	savedCaster          int
 	savedCleric          bool
 	KbdMode              bool   // ds:814a, mouse disabled in preferences
+	NoSound              bool   // sound driver argument '4' (S07c8_0037)
 	hl, hlCol            int    // ds:54f2 / ds:54f4 keyboard highlight rect, colour index
 	hlNext               uint32 // ds:fc5e
 	camp                 campState

@@ -42,6 +42,12 @@ type SoundPlayer interface {
 	PlaySound(id int)
 }
 
+// DistSoundPlayer is optionally implemented by a SoundPlayer to play a sound
+// dist blocks from the party (AdLib branch of S177d_0106).
+type DistSoundPlayer interface {
+	PlaySoundAt(id, dist int)
+}
+
 // MusicPlayer is optionally implemented by a System to play SOUND.DAT tracks
 // (same format and id table as ADLIB.DAT).
 type MusicPlayer interface {

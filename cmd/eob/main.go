@@ -21,6 +21,7 @@ import (
 	"github.com/felix/goeob/internal/adlib"
 	"github.com/felix/goeob/internal/eob"
 	"github.com/felix/goeob/internal/pak"
+	"github.com/felix/goeob/internal/pcspk"
 )
 
 type platform struct {
@@ -33,13 +34,25 @@ type platform struct {
 	help   bool
 	paused time.Duration // game time frozen while help is open
 	helpAt time.Time
-	snd    *adlib.Player
+	snd    soundDriver
 	mus    *adlib.Player
+}
+
+// soundDriver is the AdLib (adlib) or PC speaker (pcspk) effects player.
+type soundDriver interface {
+	Play(id int)
+	PlayAt(id, dist int)
 }
 
 func (p *platform) PlayMusic(id int) {
 	if p.mus != nil {
 		p.mus.Play(id)
+	}
+}
+
+func (p *platform) PlaySoundAt(id, dist int) {
+	if p.snd != nil {
+		p.snd.PlayAt(id, dist)
 	}
 }
 
@@ -254,6 +267,7 @@ func (g *game) Layout(int, int) (int, int) { return 320, 200 }
 func main() {
 	dir := flag.String("data", os.Getenv("EOB_DATA"), "path to your original Eye of the Beholder directory")
 	save := flag.String("load", "", "original save file to load directly (default: main menu)")
+	sound := flag.Int("sound", 1, "sound driver as EOB.EXE's second argument: 1 AdLib/Sound Blaster, 2 PC speaker, 3 Tandy (3-voice speaker), 4 none")
 	flag.Parse()
 	if *dir == "" {
 		log.Fatal("set -data or EOB_DATA to your original Eye of the Beholder directory")
@@ -261,13 +275,23 @@ func main() {
 	p := &platform{frame: make([]byte, 64000*4), start: time.Now()}
 	if fs, err := pak.Open(*dir); err == nil {
 		ctx := audio.NewContext(44100)
-		p.snd = startAdlib(ctx, fs, *dir, "ADLIB.DAT", "EOB.EXE")
+		switch *sound {
+		case 1:
+			if pl := startAdlib(ctx, fs, *dir, "ADLIB.DAT", "EOB.EXE"); pl != nil {
+				p.snd = pl
+			}
+		case 2, 3:
+			if pl := startSpeaker(ctx, fs, *dir, *sound); pl != nil {
+				p.snd = pl
+			}
+		}
 		p.mus = startAdlib(ctx, fs, *dir, "SOUND.DAT", "INTRO.EXE")
 	}
 	e, err := eob.New(*dir, p)
 	if err != nil {
 		log.Fatal(err)
 	}
+	e.NoSound = *sound == 4
 	go func() {
 		if err := e.Run(*save); err != nil {
 			log.Println(err)
@@ -283,6 +307,33 @@ func main() {
 	if err := ebiten.RunGame(&game{p: p, img: ebiten.NewImage(320, 200)}); err != nil && err != ebiten.Termination {
 		log.Fatal(err)
 	}
+}
+
+// startSpeaker loads PCSOUND.DAT for the PC speaker driver (sound 2: one
+// voice, 3: the Tandy option's three voices) and streams it.
+func startSpeaker(ctx *audio.Context, fs *pak.FS, dir string, sound int) *pcspk.Player {
+	d, err := fs.Read("PCSOUND.DAT")
+	if err != nil {
+		return nil
+	}
+	exe, err := os.ReadFile(filepath.Join(dir, "EOB.EXE"))
+	if err != nil {
+		return nil
+	}
+	voices := 1
+	if sound == 3 {
+		voices = 3
+	}
+	pl, err := pcspk.New(d, exe, 44100, voices)
+	if err != nil {
+		log.Printf("pcspk: %v; sound disabled", err)
+		return nil
+	}
+	if ap, err := ctx.NewPlayer(pl); err == nil {
+		ap.SetBufferSize(50 * time.Millisecond)
+		ap.Play()
+	}
+	return pl
 }
 
 // startAdlib loads an ADLIB.DAT-format file and streams its player, using
