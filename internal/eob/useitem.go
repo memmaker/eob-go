@@ -8,17 +8,51 @@ func (e *Engine) eatFood(c int) {
 		return
 	}
 	it := e.heldItem()
-	if t := e.Items[it].Type; t != 0x1f && t != 0x31 {
+	if !isFood(e.Items[it].Type) {
 		if it != 0 {
 			e.printMessage(e.X.Str(0x378c))
 		}
 		return
 	}
+	e.consumeFood(c, it)
+	e.setHandItem(0)
+}
+
+func isFood(t int8) bool { return t == 0x1f || t == 0x31 } // rations, kenku egg
+
+// consumeFood is eatFood's tail: character c eats item it.
+func (e *Engine) consumeFood(c, it int) {
+	ch := &e.Chars[c]
 	ch.Food = byte(min(int(ch.Food)+int(e.Items[it].Value), 100))
 	e.Items[it].Block = -1
-	e.setHandItem(0)
 	e.drawFood(c)
 	e.playSound(9)
+}
+
+// eatFromSlot (extension) is a right click on an inventory slot: the shown
+// character eats the food in it. False if the click hit no food.
+func (e *Engine) eatFromSlot(ev Event) bool {
+	for _, k := range e.activeButtons() {
+		b := &e.ButtonDefs[k]
+		if b.CB != cbAddr(0x0acd, 0x01c0) || ev.X < b.X || ev.X >= b.X+b.W || ev.Y < b.Y || ev.Y >= b.Y+b.H {
+			continue
+		}
+		c, slot := e.InvChar, b.Arg
+		it := int(e.Chars[c].Inventory[slot])
+		if slot == 16 || !isFood(e.Items[it].Type) {
+			return false
+		}
+		if !e.charStatus(c, 5) {
+			e.printMessage(sprintfC(e.X.Str(0x376a), e.Chars[c].NameStr()))
+			return true
+		}
+		e.Chars[c].Inventory[slot] = 0
+		e.consumeFood(c, it)
+		e.drawInvSlotNow(slot)
+		e.spendTurn()
+		return true
+	}
+	return false
 }
 
 // castFromItem ports S0ef3_28ed.

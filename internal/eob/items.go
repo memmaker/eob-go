@@ -113,28 +113,67 @@ func (e *Engine) clickedFloor(area, button int) {
 	e.spendTurn()
 }
 
-// stowItem puts item it into the first free backpack slot (2..15) of the
-// character with the most free slots; false if every backpack is full.
+// stowItem gives item it to the character who suits it best, false if
+// nobody has room. Preferred, in order: for ammo, a character wielding the
+// matching launcher (arrows go into the quiver); for throwing weapons, one
+// already carrying that type (onto the belt when it has room); for rations,
+// the one carrying fewest; for lock picks and class-restricted weapons /
+// armour, one who can use it. Ties go to the most free backpack slots.
 func (e *Engine) stowItem(it int) bool {
-	best, bestFree, slot := -1, 0, 0
+	typ := int(e.Items[it].Type)
+	t := &e.ItemTypes[typ]
+	fits := func(s int) bool { return e.X.U16(dsSlotMask+s*2)&t.InvFlags != 0 }
+	best, bestPref, bestFree, slot := -1, 0, 0, 0
 	for c := range e.Chars {
 		if !e.charStatus(c, 1) {
 			continue
 		}
-		free, first := 0, 0
-		for s := 15; s >= 2; s-- {
-			if e.Chars[c].Inventory[s] == 0 {
-				free, first = free+1, s
+		ch := &e.Chars[c]
+		free, have, launcher, to := 0, 0, false, -1
+		for s, x := range ch.Inventory {
+			switch {
+			case x == 0 && s >= 2 && s <= 15:
+				if free++; to < 0 {
+					to = s
+				}
+			case x != 0 && int(e.Items[x].Type) == typ:
+				have++
+			case x != 0 && s < 2 && e.ItemTypes[e.Items[x].Type].ExtraProps&0x7f == 3:
+				launcher = launcher || e.u8(dsAmmoType+int(e.Items[x].Type)) == typ
 			}
 		}
-		if free > bestFree {
-			best, bestFree, slot = c, free, first
+		pref := 0
+		switch {
+		case typ == 0x1f: // rations
+			pref = -have
+		case launcher:
+			pref = 3
+			if fits(16) {
+				to = 16
+			}
+		case t.ExtraProps&0x7f == 2 && have > 0:
+			pref = 2
+			for s := 0x16; s <= 0x18; s++ {
+				if ch.Inventory[s] == 0 && fits(s) {
+					to = s
+					break
+				}
+			}
+		case t.AllowedClasses != 0xf && e.classCanUse(c, it):
+			pref = 1
+		}
+		if to >= 0 && (best < 0 || pref > bestPref || pref == bestPref && free > bestFree) {
+			best, bestPref, bestFree, slot = c, pref, free, to
 		}
 	}
 	if best < 0 {
 		return false
 	}
-	e.Chars[best].Inventory[slot] = uint16(it)
+	if ch := &e.Chars[best]; slot == 16 {
+		e.linkItem(&ch.Inventory[16], -2, it, 0)
+	} else {
+		ch.Inventory[slot] = uint16(it)
+	}
 	e.printMessage(fmt.Sprintf("%s takes %s.\r", e.Chars[best].NameStr(), e.itemName(it)))
 	e.drawCharPanel(best)
 	return true

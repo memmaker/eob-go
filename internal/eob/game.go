@@ -262,6 +262,9 @@ func (e *Engine) Run(savePath string) (err error) {
 				e.turnLeft = 0
 				continue
 			}
+			if ev.Kind == EvMouseDown && ev.Button == 2 && e.GuiMode == 1 && e.eatFromSlot(ev) { // extension
+				continue
+			}
 			if !e.processButtons(ev, e.activeButtons()) && ev.Kind == EvKeyDown {
 				e.kbdCommand(ev.Key) // ports S0acd_0e6c (leftover input -> S0acd_0d9d)
 			}
