@@ -17,7 +17,7 @@ import (
 )
 
 var names = map[string]int{"up": eob.KeyKP8, "down": eob.KeyKP2, "left": eob.KeyKP4, "right": eob.KeyKP6,
-	"tl": eob.KeyKP7, "tr": eob.KeyKP9, "esc": eob.KeyEsc, "enter": eob.KeyEnter, "space": eob.KeySpace, "tab": eob.KeyTab, "m": eob.KeyMap, "camp": 48,
+	"tl": eob.KeyKP7, "tr": eob.KeyKP9, "esc": eob.KeyEsc, "enter": eob.KeyEnter, "space": eob.KeySpace, "tab": eob.KeyTab, "m": eob.KeyMap, "i": 24, "camp": 48,
 	"f1": eob.KeyF1, "f2": eob.KeyF2, "f3": eob.KeyF3, "f4": eob.KeyF4, "minus": eob.KeyMinus, "plus": eob.KeyEqual}
 
 var pads = map[string]int{"pa": eob.PadA, "pb": eob.PadB, "pu": eob.PadUp, "pd": eob.PadDown, "pl": eob.PadLeft, "pr": eob.PadRight}

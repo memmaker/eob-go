@@ -333,24 +333,26 @@ func (e *Engine) ambientSound() {
 	e.playSoundAt(0x1e, e.CurrentBlock+e.rollDice(1, 12, -1))
 }
 
-// partyAttack (extension) is a right click on the primary hand of one
-// front-row character, alternating between the two on each press. A
-// character who is down, still recovering or holding a spellbook / holy
-// symbol is passed over in favour of the other.
+// partyAttack (extension) is a right click on a hand of a front-row
+// character, cycling on each press through both primary hands, then both
+// secondary hands. A character who is down or still recovering that hand
+// is passed over; so is a primary spellbook / holy symbol, and a secondary
+// hand without a weapon.
 func (e *Engine) partyAttack() {
-	for k := 0; k < 2; k++ {
-		c := e.attackNext
-		e.attackNext ^= 1
+	for k := 0; k < 4; k++ {
+		n := e.attackNext
+		e.attackNext = (n + 1) & 3
+		c, hand := n&1, n>>1
 		ch := &e.Chars[c]
-		if !e.charStatus(c, 0xd) || ch.DisabledSlots&1 != 0 {
+		if !e.charStatus(c, 0xd) || ch.DisabledSlots&(1<<hand) != 0 {
 			continue
 		}
-		if it := int(ch.Inventory[0]); it != 0 {
-			if p := e.ItemTypes[e.Items[it].Type].ExtraProps & 0x7f; p == 5 || p == 6 {
-				continue
-			}
+		it := int(ch.Inventory[hand])
+		p := e.ItemTypes[e.Items[it].Type].ExtraProps & 0x7f
+		if it != 0 && (p == 5 || p == 6) || hand == 1 && (it == 0 || p < 1 || p > 3) {
+			continue
 		}
-		e.useItem(c, 0)
+		e.useItem(c, hand)
 		return
 	}
 }

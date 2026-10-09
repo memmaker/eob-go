@@ -161,7 +161,7 @@ type Engine struct {
 	padX, padY             int      // cursor at the last gamepad press (pad.go)
 	padNav                 bool     // D-pad drives the menu highlight
 	padClick               [3]bool  // A/B pressed as a click: release as one
-	attackNext             int      // front-row character the F key attacks with next (extension)
+	attackNext             int      // F key cycle (extension): bit 0 front-row character, bit 1 secondary hand
 	miniLvl                int      // level the minimap colours below were taken from
 	miniFloor, miniWall    byte     // average floor / wall texture colours
 	miniDoor, miniOpenDoor byte     // light blue closed, dark blue open doors
