@@ -363,7 +363,7 @@ func (e *Engine) canUseHand(c, hand int) bool {
 		return r == 0 || e.classCanUse(c, r)
 	}
 	l := int(ch.Inventory[1])
-	if r != 0 && e.ItemTypes[e.Items[r].Type].RequiredHands == 2 {
+	if r != 0 && e.ItemTypes[e.Items[r].Type].RequiredHands == 2 && !(e.isSpellItem(l) && e.noMonsterAround()) {
 		return false // two-handed weapon in the right hand
 	}
 	if l == 0 {
@@ -376,10 +376,113 @@ func (e *Engine) canUseHand(c, hand int) bool {
 	return e.classCanUse(c, l)
 }
 
+// isSpellItem reports a spellbook or holy symbol.
+func (e *Engine) isSpellItem(it int) bool {
+	p := e.ItemTypes[e.Items[it].Type].ExtraProps & 0x7f
+	return it != 0 && (p == 5 || p == 6)
+}
+
+// noMonsterAround (extension): no living monster in view or within one block,
+// so a two-handed weapon need not block the spellbook / holy symbol hand.
+func (e *Engine) noMonsterAround() bool {
+	for i := range e.Monsters {
+		m := &e.Monsters[i]
+		if m.HPCur > 0 && (blockDistance(e.CurrentBlock, int(m.Block)) < 2 || e.inView(int(m.Block))) {
+			return false
+		}
+	}
+	return true
+}
+
+// inView is blockVisible without its redraw request.
+func (e *Engine) inView(block int) bool {
+	for i := 0; i < 15; i++ {
+		if (e.CurrentBlock+int(e.T.BlockIndex[e.CurrentDirection*18+i]))&0x3ff == block {
+			return true
+		}
+	}
+	return false
+}
+
 // DrawPlayfield draws the party panel for all characters.
 // DrawPlayfield ports S0d1c_0583: redraws the six character panels.
 func (e *Engine) DrawPlayfield() {
 	for c := 0; c < 6; c++ {
 		e.drawCharPanel(c)
+	}
+}
+
+// hoverItem (extension) returns the item under the mouse in an inventory
+// slot or a party hand, 0 for none.
+func (e *Engine) hoverItem(mx, my int) int {
+	for _, k := range e.activeButtons() {
+		b := &e.ButtonDefs[k]
+		if mx < b.X || mx >= b.X+b.W || my < b.Y || my >= b.Y+b.H {
+			continue
+		}
+		switch b.CB {
+		case cbAddr(0x0acd, 0x01c0):
+			return int(e.Chars[e.InvChar].Inventory[b.Arg])
+		case cbAddr(0x0acd, 0x0415):
+			hand := 0
+			if e.u8(dsHandSplitY+b.Arg*2) <= my {
+				hand = 1
+			}
+			return int(e.Chars[b.Arg].Inventory[hand])
+		}
+	}
+	return 0
+}
+
+// itemTip (extension) is the hover popup text: name plus the stats the game
+// reads (calcDamage, recalcArmorClass); nil for items that are neither.
+func (e *Engine) itemTip(it int) []string {
+	t, v := e.itemType(it), int(e.Items[it].Value)
+	if e.Items[it].Flags&0x40 == 0 {
+		v = 0 // unidentified: the bonus stays hidden
+	}
+	dice := func(n, p, inc int) string {
+		s := itoa(n) + "D" + itoa(p)
+		if inc += v; inc > 0 {
+			s += "+" + itoa(inc)
+		} else if inc < 0 {
+			s += itoa(inc)
+		}
+		return s
+	}
+	switch {
+	case t.ExtraProps&0x7f == 0 && t.ArmorClass < 0:
+		return []string{e.itemName(it), "ARMOR " + itoa(v-int(t.ArmorClass))}
+	case t.DmgDiceS > 0:
+		return []string{e.itemName(it), "DMG " + dice(int(t.DmgDiceS), int(t.DmgPipsS), int(t.DmgIncS)),
+			"VS LARGE " + dice(int(t.DmgDiceL), int(t.DmgPipsL), int(t.DmgIncS))}
+	}
+	return nil
+}
+
+// drawItemTip (extension) draws the popup for the item under the mouse once
+// it has rested there for 0.7 s.
+func (e *Engine) drawItemTip(p, mx, my int) {
+	if mx != e.tipX || my != e.tipY || e.HandItem != 0 {
+		e.tipX, e.tipY, e.tipAt = mx, my, e.Sys.Millis()
+		return
+	}
+	it := e.hoverItem(mx, my)
+	if it == 0 || e.Sys.Millis()-e.tipAt < 700 {
+		return
+	}
+	lines := e.itemTip(it)
+	w := 0
+	for _, l := range lines {
+		w = max(w, len(l)*6) // ponytail: fixed 6px advance, measure glyphs if the box looks off
+	}
+	h := len(lines) * 8
+	x, y := max(mx-w-6, 3), max(my-h-5, 3) // box ends up-left of the cursor
+	if len(lines) == 0 {
+		return
+	}
+	e.Scr.DrawBox3D(p, x-3, y-3, x+w+2, y+h+1, e.col.BoxHi, e.col.BoxLo, int(e.col.BoxFill))
+	for i, l := range lines {
+		e.Scr.PrintText(e.font6, p, l, x, y+i*8, 0xf, 0)
 	}
 }

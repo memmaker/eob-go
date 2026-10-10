@@ -24,6 +24,9 @@ func le16(b []byte) uint16 { return binary.LittleEndian.Uint16(b) }
 // loadLevel ports S082c_0ae8 ("%s%d.%s" filename sprintf, inlined).
 func (e *Engine) loadLevel(level int) error {
 	e.CurrentLevel = level
+	if m, ok := e.Sys.(LevelMusicPlayer); ok {
+		m.PlayLevelMusic(level)
+	}
 	raw, err := e.FS.Read(fmt.Sprintf("LEVEL%d.INF", level))
 	if err != nil {
 		return err

@@ -55,3 +55,9 @@ type DistSoundPlayer interface {
 type MusicPlayer interface {
 	PlayMusic(id int)
 }
+
+// LevelMusicPlayer is optionally implemented by a System to play background
+// music for a dungeon level (extension: the Sega CD soundtrack).
+type LevelMusicPlayer interface {
+	PlayLevelMusic(level int)
+}

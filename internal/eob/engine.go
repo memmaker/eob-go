@@ -187,6 +187,8 @@ type Engine struct {
 	ambientNext          uint32 // ds:fc5a
 	SpellbookOpen        bool
 	mouseX, mouseY       int
+	tipX, tipY           int    // extension: item popup hover spot
+	tipAt                uint32 // Sys.Millis when the mouse came to rest
 	Timers               [numTimers]Timer
 	timerHandlers        map[uint32]func(int)
 	ticks                uint32

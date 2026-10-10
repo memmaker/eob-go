@@ -1,6 +1,9 @@
 package eob
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestLevelRoundTrip(t *testing.T) {
 	e, err := New(testDir, nil)
@@ -142,5 +145,29 @@ func TestTurnMonster(t *testing.T) {
 	}
 	if e.turnMonster(m, need-1, 0) || !e.turnMonster(m, need, 0) || m.Flags&8 == 0 {
 		t.Fatalf("need %d, flags %#x", need, m.Flags)
+	}
+}
+
+func TestItemTip(t *testing.T) {
+	e, err := New(testDir, nil)
+	if err != nil {
+		t.Skip(err)
+	}
+	e.DebugLoadSave(testSave)
+	got := map[string]string{}
+	for i := 1; i < len(e.Items); i++ {
+		if e.Items[i].Type < 0 || e.Items[i].NameUnid == 0 {
+			continue
+		}
+		e.Items[i].Flags |= 0x40
+		if l := e.itemTip(i); l != nil {
+			got[l[0]] = strings.Join(l[1:], ", ")
+		}
+	}
+	for _, n := range []string{"Long Sword", "Drow Shield +3", "Cursed Axe -3"} {
+		t.Logf("%s: %s", n, got[n])
+		if got[n] == "" {
+			t.Errorf("no tip for %q", n)
+		}
 	}
 }

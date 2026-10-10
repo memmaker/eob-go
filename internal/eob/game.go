@@ -225,7 +225,12 @@ func (e *Engine) Run(savePath string) (err error) {
 	e.present()
 	e.inGame = true
 	e.ambientNext = e.ticks + uint32(e.rollDice(1, 10, 3)*18)
+	calm := e.noMonsterAround()
 	for !e.quit {
+		if c := e.noMonsterAround(); c != calm && e.GuiMode == 0 { // extension: re-dither spellbook hands
+			calm = c
+			e.DrawPlayfield()
+		}
 		for {
 			ev, ok := e.pollGame()
 			if !ok {
@@ -346,6 +351,9 @@ func (e *Engine) present() {
 		}
 		e.Scr.PrintText(e.font6, 15, "TURN", 3, 3, 0xc, 0) // shadow
 		e.Scr.PrintText(e.font6, 15, "TURN", 2, 2, fg, 0)
+	}
+	if e.inGame && !e.bigOpen {
+		e.drawItemTip(15, mx, my)
 	}
 	if shp != nil {
 		e.Scr.DrawShapeClip(15, shp, mx-hx, my-hy, 0, 0, 320, 200, hf)

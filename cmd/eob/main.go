@@ -36,6 +36,13 @@ type platform struct {
 	helpAt time.Time
 	snd    soundDriver
 	mus    *adlib.Player
+	cd     *cdMusic // nil without the Sega CD soundtrack
+}
+
+func (p *platform) PlayLevelMusic(level int) {
+	if p.cd != nil {
+		p.cd.PlayLevelMusic(level)
+	}
 }
 
 // soundDriver is the AdLib (adlib) or PC speaker (pcspk) effects player.
@@ -337,7 +344,21 @@ func main() {
 	dir := flag.String("data", os.Getenv("EOB_DATA"), "path to your original Eye of the Beholder directory")
 	save := flag.String("load", "", "original save file to load directly (default: main menu)")
 	sound := flag.Int("sound", 1, "sound driver as EOB.EXE's second argument: 1 AdLib/Sound Blaster, 2 PC speaker, 3 Tandy (3-voice speaker), 4 none")
+	imp := flag.String("import", "", "copy the game found under this directory into -data, then exit")
+	impCD := flag.String("import-cd", "", "copy the Sega CD soundtrack found under this directory (.cue/.bin) into -data, then exit")
 	flag.Parse()
+	if *impCD != "" {
+		if err := importCD(*impCD, *dir); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+	if *imp != "" {
+		if err := importGame(*imp, *dir); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
 	if *dir == "" {
 		log.Fatal("set -data or EOB_DATA to your original Eye of the Beholder directory")
 	}
@@ -355,6 +376,9 @@ func main() {
 			}
 		}
 		p.mus = startAdlib(ctx, fs, *dir, "SOUND.DAT", "INTRO.EXE")
+		if hasCD(*dir) {
+			p.cd = &cdMusic{ctx: ctx, dir: *dir}
+		}
 	}
 	e, err := eob.New(*dir, p)
 	if err != nil {
