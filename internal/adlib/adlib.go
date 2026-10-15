@@ -13,7 +13,7 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/felix/goeob/internal/opl"
+	"github.com/memmaker/opl2"
 )
 
 const (
@@ -63,7 +63,7 @@ type channel struct {
 // Player runs the driver and renders PCM. It is safe for concurrent use.
 type Player struct {
 	mu        sync.Mutex
-	chip      *opl.Chip
+	chip      *opl2.Resampler
 	ids       []byte // sound id -> program
 	data      []byte
 	ch        [10]channel
@@ -89,7 +89,7 @@ func New(file []byte, rate int) (*Player, error) {
 	if len(file) < 120+4*numPrograms {
 		return nil, errors.New("adlib: data too short")
 	}
-	p := &Player{chip: opl.New(rate), ids: file[:120], data: file[120:], rate: rate, rnd: 0x1234,
+	p := &Player{chip: opl2.NewResampler(opl2.New(), rate), ids: file[:120], data: file[120:], rate: rate, rnd: 0x1234,
 		lastLvl: 0xff, lastPri: 0xff} // ds:5e28/5e2a start as 0xffff (5e26 = 0)
 	p.reset()
 	return p, nil
@@ -147,7 +147,7 @@ func (p *Player) LoadDriver(exe []byte) bool {
 	return false
 }
 
-func (p *Player) w(r, v int) { p.chip.Write(byte(r), byte(v)) }
+func (p *Player) w(r, v int) { p.chip.Chip.Write(r, byte(v)) }
 
 func (p *Player) u8(i int) uint8 {
 	if i < 0 || i >= len(p.data) {

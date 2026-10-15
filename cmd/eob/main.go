@@ -4,6 +4,7 @@ package main
 
 import (
 	"flag"
+	"image"
 	"image/color"
 	"log"
 	"os"
@@ -37,6 +38,37 @@ type platform struct {
 	snd    soundDriver
 	mus    *adlib.Player
 	cd     *cdMusic // nil without the Sega CD soundtrack
+
+	// the pointer the page shows (browser only): its picture in RGBA and hot spot;
+	// virtual is set while the gamepad's stick, not the mouse, places the pointer
+	cursor           *image.RGBA
+	cursorX, cursorY int
+	virtual          bool
+}
+
+// HardwareCursor: in the browser the page's cursor is the pointer, unless the gamepad
+// moves it (the page's cursor follows only the mouse).
+func (p *platform) HardwareCursor() bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return hardwareCursor && !p.virtual
+}
+
+func (p *platform) ShowCursor(pix []byte, mask []bool, w, h, hotX, hotY int, pal []byte) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if pix == nil {
+		p.cursor = nil
+		return
+	}
+	img := image.NewRGBA(image.Rect(0, 0, w, h))
+	for i, c := range pix {
+		if mask[i] {
+			r, g, b := pal[3*int(c)]&63, pal[3*int(c)+1]&63, pal[3*int(c)+2]&63
+			copy(img.Pix[4*i:], []byte{r<<2 | r>>4, g<<2 | g>>4, b<<2 | b>>4, 255})
+		}
+	}
+	p.cursor, p.cursorX, p.cursorY = img, hotX, hotY
 }
 
 func (p *platform) PlayLevelMusic(level int) {
@@ -179,6 +211,7 @@ type game struct {
 	img            *ebiten.Image
 	vx, vy         float64 // cursor, driven by the mouse or the left stick
 	lastMX, lastMY int
+	outW, outH     int // the window's size in CSS pixels, for the page's cursor
 }
 
 // padKeys maps standard-layout gamepad buttons to game keys (extension).
@@ -209,6 +242,7 @@ func (g *game) Update() error {
 	}
 	if mx != g.lastMX || my != g.lastMY { // the real mouse moved: it wins
 		g.vx, g.vy, g.lastMX, g.lastMY = float64(mx), float64(my), mx, my
+		p.virtual = false
 	}
 	var pads []ebiten.GamepadID
 	pads = ebiten.AppendGamepadIDs(pads)
@@ -229,6 +263,7 @@ func (g *game) Update() error {
 		if ax*ax+ay*ay > 0.04 { // dead zone
 			g.vx = min(max(g.vx+ax*4, 0), 319)
 			g.vy = min(max(g.vy+ay*4, 0), 199)
+			p.virtual = true
 		}
 	}
 	mx, my = int(g.vx), int(g.vy)
@@ -300,12 +335,20 @@ func (g *game) Draw(screen *ebiten.Image) {
 	g.p.mu.Lock()
 	g.img.WritePixels(g.p.frame)
 	help := g.p.help
+	cur, hx, hy := g.p.cursor, g.p.cursorX, g.p.cursorY
+	if !hardwareCursor || g.p.virtual {
+		cur = nil
+	}
 	g.p.mu.Unlock()
+	showCursor(cur, hx, hy, g.outW, g.outH)
 	var op ebiten.DrawImageOptions
 	op.GeoM.Scale(2, 2)
 	screen.DrawImage(g.img, &op)
 	if help {
 		drawHelp(screen)
+	}
+	if cur != nil {
+		drawCursor(screen)
 	}
 }
 
@@ -338,7 +381,10 @@ func drawHelp(screen *ebiten.Image) {
 	}
 }
 
-func (g *game) Layout(int, int) (int, int) { return 640, 400 }
+func (g *game) Layout(w, h int) (int, int) {
+	g.outW, g.outH = w, h
+	return 640, 400
+}
 
 func main() {
 	dir := flag.String("data", os.Getenv("EOB_DATA"), "path to your original Eye of the Beholder directory")
@@ -367,7 +413,7 @@ func main() {
 		ctx := audio.NewContext(44100)
 		switch *sound {
 		case 1:
-			if pl := startAdlib(ctx, fs, *dir, "ADLIB.DAT", "EOB.EXE"); pl != nil {
+			if pl := startAdlib(ctx, fs, *dir, "ADLIB.DAT", "EOB.EXE", "sfx"); pl != nil {
 				p.snd = pl
 			}
 		case 2, 3:
@@ -375,7 +421,7 @@ func main() {
 				p.snd = pl
 			}
 		}
-		p.mus = startAdlib(ctx, fs, *dir, "SOUND.DAT", "INTRO.EXE")
+		p.mus = startAdlib(ctx, fs, *dir, "SOUND.DAT", "INTRO.EXE", "music")
 		if hasCD(*dir) {
 			p.cd = &cdMusic{ctx: ctx, dir: *dir}
 		}
@@ -396,7 +442,9 @@ func main() {
 	ebiten.SetWindowSize(960, 600)
 	ebiten.SetWindowTitle("Eye of the Beholder")
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
-	ebiten.SetCursorMode(ebiten.CursorModeHidden) // the game draws its own cursor
+	if !hardwareCursor {
+		ebiten.SetCursorMode(ebiten.CursorModeHidden) // the game draws its own cursor
+	}
 	if err := ebiten.RunGame(&game{p: p, img: ebiten.NewImage(320, 200)}); err != nil && err != ebiten.Termination {
 		log.Fatal(err)
 	}
@@ -422,7 +470,7 @@ func startSpeaker(ctx *audio.Context, fs *pak.FS, dir string, sound int) *pcspk.
 		log.Printf("pcspk: %v; sound disabled", err)
 		return nil
 	}
-	if ap, err := ctx.NewPlayer(pl); err == nil {
+	if ap, err := ctx.NewPlayer(faded{pl, "sfx"}); err == nil {
 		ap.SetBufferSize(50 * time.Millisecond)
 		ap.Play()
 	}
@@ -430,8 +478,9 @@ func startSpeaker(ctx *audio.Context, fs *pak.FS, dir string, sound int) *pcspk.
 }
 
 // startAdlib loads an ADLIB.DAT-format file and streams its player, using
-// the driver tables of the executable that plays it.
-func startAdlib(ctx *audio.Context, fs *pak.FS, dir, name, exeName string) *adlib.Player {
+// the driver tables of the executable that plays it, on the desk fader's
+// kind (volume.go).
+func startAdlib(ctx *audio.Context, fs *pak.FS, dir, name, exeName, kind string) *adlib.Player {
 	d, err := fs.Read(name)
 	if err != nil {
 		return nil
@@ -445,7 +494,7 @@ func startAdlib(ctx *audio.Context, fs *pak.FS, dir, name, exeName string) *adli
 		log.Printf("adlib: driver tables not found in %s; sound disabled", exeName)
 		return nil
 	}
-	if ap, err := ctx.NewPlayer(pl); err == nil {
+	if ap, err := ctx.NewPlayer(faded{pl, kind}); err == nil {
 		ap.SetBufferSize(50 * time.Millisecond)
 		ap.Play()
 	}

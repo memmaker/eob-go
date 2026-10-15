@@ -1,5 +1,7 @@
 package eob
 
+import "github.com/felix/goeob/internal/gfx"
+
 const (
 	dsDirBlockOffs = 0x1790 // int8[4] block offset per direction
 	dsOppositeSide = 0x547e // byte[4] wall side to test when entering
@@ -355,10 +357,63 @@ func (e *Engine) present() {
 	if e.inGame && !e.bigOpen {
 		e.drawItemTip(15, mx, my)
 	}
-	if shp != nil {
+	cs, hw := e.Sys.(CursorShower)
+	hw = hw && cs.HardwareCursor()
+	if shp != nil && !hw {
 		e.Scr.DrawShapeClip(15, shp, mx-hx, my-hy, 0, 0, 320, 200, hf)
 	}
 	e.Sys.Present(e.Scr.Pages[15], e.Scr.Pal[:])
+	switch {
+	case hw && shp != nil:
+		e.showHardwareCursor(cs, shp, hx, hy, hf)
+	case cs != nil:
+		cs.ShowCursor(nil, nil, 0, 0, 0, 0, nil)
+	}
+}
+
+// hardwareCursor is the pointer's picture last made for the System, and what it was made
+// from.
+type hardwareCursor struct {
+	shp        *gfx.Shape
+	hx, hy, hf int
+	pix        []byte
+	mask       []bool
+	w, h       int
+}
+
+// showHardwareCursor hands the System the pointer: shp drawn twice into the scratch page
+// 15 (already presented), cleared to 0 and to 255, is opaque where both draws agree.
+func (e *Engine) showHardwareCursor(cs CursorShower, shp *gfx.Shape, hx, hy, hf int) {
+	c := &e.hwCursor
+	if c.shp != shp || c.hx != hx || c.hy != hy || c.hf != hf {
+		const size = 32
+		var draws [2][]byte
+		for i, bg := range []byte{0, 255} {
+			pg := e.Scr.Pages[15]
+			for o := range pg {
+				pg[o] = bg
+			}
+			e.Scr.DrawShapeClip(15, shp, 0, 0, 0, 0, size, size, hf)
+			draws[i] = append([]byte(nil), pg[:320*size]...)
+		}
+		*c = hardwareCursor{shp: shp, hx: hx, hy: hy, hf: hf, w: 1, h: 1}
+		for y := range size {
+			for x := range size {
+				if o := y*320 + x; draws[0][o] == draws[1][o] {
+					c.w, c.h = max(c.w, x+1), max(c.h, y+1)
+				}
+			}
+		}
+		c.pix, c.mask = make([]byte, c.w*c.h), make([]bool, c.w*c.h)
+		for y := range c.h {
+			for x := range c.w {
+				if o := y*320 + x; draws[0][o] == draws[1][o] {
+					c.pix[y*c.w+x], c.mask[y*c.w+x] = draws[0][o], true
+				}
+			}
+		}
+	}
+	cs.ShowCursor(c.pix, c.mask, c.w, c.h, c.hx, c.hy, e.Scr.Pal[:])
 }
 
 // ambientSound ports the ambient part of S0acd_0e8a: on levels 1-3, every

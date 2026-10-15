@@ -27,7 +27,8 @@ Controls: W/S/A/D or arrows = move, Q/E = turn, Ctrl+H = help, Tab = minimap, F 
 | GUI: portraits, inventory, char sheet, text (`FONT6/8.FNT`) | todo |
 | Character generation | todo |
 | Combat, spells, rest/camp, save/load (`EOBDATA.SAV`) | todo |
-| Intro/finale (`INTRO.EXE`, `*.CMP`), sound (`*.DAT` AdLib/PC speaker) | todo |
+| Sound: effects (`ADLIB.DAT`) and music (`SOUND.DAT`) on [opl2](https://github.com/memmaker/opl2), PC speaker | done (`internal/adlib`, `internal/pcspk`) |
+| Intro/finale (`INTRO.EXE`, `*.CMP`) | todo |
 
 ## File-format notes
 - **PAK**: `{u32 offset, NUL name}*`, then the data.

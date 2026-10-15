@@ -433,7 +433,7 @@ func (c *cdMusic) play(track int) {
 	if err != nil {
 		return
 	}
-	pl, err := c.ctx.NewPlayer(audio.NewInfiniteLoop(f, size))
+	pl, err := c.ctx.NewPlayer(faded{audio.NewInfiniteLoop(f, size), "music"})
 	if err != nil {
 		f.Close()
 		return

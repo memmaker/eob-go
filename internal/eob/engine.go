@@ -74,7 +74,8 @@ type doorSwitch struct {
 
 // Engine is the game.
 type Engine struct {
-	nullChar Character // see charRec
+	hwCursor hardwareCursor // the pointer's picture for a CursorShower
+	nullChar Character      // see charRec
 	FS       *pak.FS
 	X        *exe.EXE
 	T        *Tables

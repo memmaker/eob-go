@@ -38,6 +38,15 @@ type System interface {
 	Sleep(ms int)
 }
 
+// CursorShower is optionally implemented by a System that shows the pointer itself (the
+// browser's cursor): while HardwareCursor reports true, the engine hands it the pointer's
+// picture instead of drawing it. ShowCursor takes w*h palette indexes, opaque where mask
+// is set, the hot spot and the palette; nil pix hides the pointer.
+type CursorShower interface {
+	HardwareCursor() bool
+	ShowCursor(pix []byte, mask []bool, w, h, hotX, hotY int, pal []byte)
+}
+
 // SoundPlayer is optionally implemented by a System to play sound effects;
 // id is the game's sound id (index into the ADLIB.DAT id table).
 type SoundPlayer interface {
